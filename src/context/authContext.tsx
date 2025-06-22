@@ -1,7 +1,43 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "@/lib/api";
+interface Skill {
+  id: number;
+  name: string;
+}
 
+interface Education {
+  id: number;
+  degree: string;
+  institution: string;
+  start_year: string;
+  end_year: string;
+}
+
+interface UploadedFile {
+  id: number;
+  file_url: string;
+  file_type: string;
+}
+interface works{
+  id:number;
+  company:string;
+  description:string;
+  start_year:string;
+  end_year:string;
+  post:string;
+}
+interface services{
+  id:number;
+  name:string;
+}
+interface organization_profile{
+  id:number;
+  founding_year:string;
+  industry_type:string;
+  contact_person:string;
+
+}
 interface UserProfile {
   id: number;
   first_name: string;
@@ -9,14 +45,21 @@ interface UserProfile {
   last_name: string;
   phone: string;
   company_name: string;
+  address: string;
   profile_picture: string;
-  professional_title:string ;
+  professional_title: string;
   email: string;
   role: string;
-  bio:string;
+  bio: string;
+  profile_visibility:string;
+  show_email:boolean;
+  show_phone:boolean;
   skills: Skill[];
-  education: Education[];
-  files: UploadedFile[]; 
+  works: works[];
+  educations: Education[];
+  files: UploadedFile[];
+  organization_profile: organization_profile
+  services:services[]  
 }
 
 interface AuthContextProps {
@@ -42,37 +85,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-
   const login = (access: string, refresh: string) => {
-    setAccessToken(access);
-    setRefreshToken(refresh);
     localStorage.setItem("access_token", access);
     localStorage.setItem("refresh_token", refresh);
-
+    setAccessToken(access);
+    setRefreshToken(refresh);
     fetchUserProfile(access);
   };
 
   const logout = () => {
+    localStorage.clear();
     setAccessToken(null);
     setRefreshToken(null);
     setUser(null);
-    localStorage.clear();
     navigate("/login");
   };
 
   const fetchUserProfile = async (token: string | null = accessToken) => {
     if (!token) return;
-
     try {
-      const res = await axios.get("http://localhost:8000/accounts/profile/", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const res = await api.get("accounts/profile/", {
+        headers: { Authorization: `Bearer ${token}` },
       });
       setUser(res.data);
     } catch (err) {
-      console.error("❌ Failed to fetch profile", err);
-      logout(); // if invalid token
+      console.error("❌ Failed to fetch profile:", err);
+      logout();
     } finally {
       setLoading(false);
     }
@@ -103,11 +141,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-// Custom hook
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error("useAuth must be used inside <AuthProvider>");
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };

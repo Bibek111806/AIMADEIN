@@ -16,182 +16,254 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-import { Shield, Mail, Lock, Trash2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Shield, Lock, Trash2, LogOut } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { useAuth } from "@/context/authContext";
+import { toast } from "@/hooks/use-toast";
+import api from "@/lib/api";
+import { useNavigate } from "react-router-dom";
 
 function Settings() {
+  const navigate = useNavigate();
+  const { user, accessToken, logout, login } = useAuth();
   const [privacy, setPrivacy] = useState({
-    profileVisibility: "connections",
-
-    showEmail: true,
-    showPhone: true,
+    profileVisibility: user?.profile_visibility || "connections",
+    showEmail: user?.show_email ?? true,
+    showPhone: user?.show_phone ?? true,
   });
+  const [passwords, setPasswords] = useState({
+    current: "",
+    new: "",
+    confirm: "",
+  });
+
+  const updatePassword = async () => {
+    if (passwords.new !== passwords.confirm) {
+      return toast({ title: "Password mismatch", variant: "destructive" });
+    }
+    try {
+      await api.post(
+        "accounts/change-password/",
+        {
+          old_password: passwords.current,
+          new_password: passwords.new,
+          confirm_password: passwords.confirm,
+        },
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      toast({ title: "Password Updated", description: "Your password has been changed." });
+      setPasswords({ current: "", new: "", confirm: "" });
+    } catch {
+      toast({ title: "Failed", description: "Could not update password", variant: "destructive" });
+    }
+  };
+
+  const savePrivacy = async () => {
+    try {
+      await api.put(
+        "accounts/privacy/",
+        {
+          profile_visibility: privacy.profileVisibility,
+          show_email: privacy.showEmail,
+          show_phone: privacy.showPhone,
+        },
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      toast({ title: "Privacy Updated", description: "Your privacy settings were saved." });
+      login(accessToken!, localStorage.getItem("refresh_token")!);
+    } catch {
+      toast({ title: "Failed", description: "Could not save privacy settings", variant: "destructive" });
+    }
+  };
+
+  const deleteAccount = async () => {
+    try {
+      await api.delete("accounts/delete/", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      toast({ title: "Account Deleted", description: "Your account was permanently deleted." });
+      logout();
+    } catch {
+      toast({ title: "Failed", description: "Could not delete account", variant: "destructive" });
+    }
+  };
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-          <p className="text-gray-600 mt-1">
-            Manage your account preferences and privacy settings
-          </p>
-        </div>
+        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+        <p className="text-gray-600">Manage your account preferences and privacy settings</p>
 
-        <div className="space-y-6">
-          {/* Password */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Lock className="mr-2 h-5 w-5" />
-                Password & Security
-              </CardTitle>
-              <CardDescription>
-                Manage your password and security settings
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Current Password
-                </label>
-                <Input type="password" placeholder="Enter current password" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  New Password
-                </label>
-                <Input type="password" placeholder="Enter new password" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Confirm New Password
-                </label>
-                <Input type="password" placeholder="Confirm new password" />
-              </div>
-              <Button className="w-full">Update Password</Button>
-            </CardContent>
-          </Card>
-          {/* privacy */}
+        {/* Password */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Lock className="mr-2 h-5 w-5" />
+              Password & Security
+            </CardTitle>
+            <CardDescription>Manage your password and security settings</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Input
+              type="password"
+              placeholder="Current password"
+              value={passwords.current}
+              onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
+            />
+            <Input
+              type="password"
+              placeholder="New password"
+              value={passwords.new}
+              onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
+            />
+            <Input
+              type="password"
+              placeholder="Confirm new password"
+              value={passwords.confirm}
+              onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
+            />
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button className="w-full">Update Password</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Do you really want to change your password?</DialogTitle>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button onClick={updatePassword}>Yes, Change</Button>
+                  <DialogClose asChild>
+                    <Button variant="outline">Cancel</Button>
+                  </DialogClose>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </CardContent>
+        </Card>
 
+        {/* Privacy Settings */}
+        {user?.role === "individual" && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Shield className="mr-2 h-5 w-5" />
                 Privacy Settings
               </CardTitle>
-              <CardDescription>
-                Control who can see your information and how you're contacted
-              </CardDescription>
+              <CardDescription>Control who can see your information</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
-                <label className="block text-sm font-medium mb-2">
-                  Profile Visibility
-                </label>
+                <label className="block text-sm font-medium mb-2">Profile Visibility</label>
                 <Select
                   value={privacy.profileVisibility}
-                  onValueChange={(value) =>
-                    setPrivacy({ ...privacy, profileVisibility: value })
-                  }
+                  onValueChange={(value) => setPrivacy({ ...privacy, profileVisibility: value })}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="public">Public (Everyone)</SelectItem>
-                    <SelectItem value="connections">
-                      Connections Only
-                    </SelectItem>
-                    <SelectItem value="organizations">
-                      Organizations Only
-                    </SelectItem>
-                    <SelectItem value="private">
-                      Private (By Request)
-                    </SelectItem>
+                    <SelectItem value="connection">Connections Only</SelectItem>
+                    <SelectItem value="organization">Organizations Only</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span>Show email address</span>
                   <Switch
                     checked={privacy.showEmail}
-                    onCheckedChange={(checked) =>
-                      setPrivacy({ ...privacy, showEmail: checked })
-                    }
+                    onCheckedChange={(checked) => setPrivacy({ ...privacy, showEmail: checked })}
                   />
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Show phone number</span>
                   <Switch
                     checked={privacy.showPhone}
-                    onCheckedChange={(checked) =>
-                      setPrivacy({ ...privacy, showPhone: checked })
-                    }
+                    onCheckedChange={(checked) => setPrivacy({ ...privacy, showPhone: checked })}
                   />
                 </div>
               </div>
+              <Button className="w-full" onClick={savePrivacy}>
+                Save Privacy Settings
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
-              <Button className="w-full">Save Privacy Settings</Button>
-            </CardContent>
-          </Card>
-          {/* Account Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Account Actions</CardTitle>
-              <CardDescription>
-                Manage your account data and preferences
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between items-center p-3 border rounded-lg border-red-200">
-                <div>
-                  <p className="font-medium text-red-700">Delete Account</p>
-                  <p className="text-sm text-red-600">
-                    Permanently delete your account
-                  </p>
-                </div>
-                <Button variant="destructive" size="sm">
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Delete
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-          {/* Login History */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Login Activity</CardTitle>
-              <CardDescription>Monitor your account access</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 border rounded-lg">
+        {/* Account Actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Account Actions</CardTitle>
+            <CardDescription>Manage your account data</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Logout */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <div className="flex justify-between items-center p-3 border rounded-lg bg-blue-50 border-blue-200 hover:bg-blue-100 transition cursor-pointer">
                   <div>
-                    <p className="font-medium">Current Session</p>
-                    <p className="text-sm text-gray-600">
-                      San Francisco, CA • Chrome • Now
-                    </p>
+                    <p className="font-medium text-blue-800">Logout</p>
+                    <p className="text-sm text-blue-700">Log out from your account</p>
                   </div>
-                  <span className="text-green-600 text-sm">Active</span>
-                </div>
-                <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Previous Session</p>
-                    <p className="text-sm text-gray-600">
-                      San Francisco, CA • Safari • 2 hours ago
-                    </p>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    Revoke
+                  <Button
+                    variant="outline"
+                    className="text-blue-700 border-blue-400 hover:bg-blue-100"
+                    size="sm"
+                  >
+                    <LogOut className="h-4 w-4 mr-1" />
+                    Logout
                   </Button>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Do you really want to logout?</DialogTitle>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button variant="destructive" onClick={logout}>Yes, Logout</Button>
+                  <DialogClose asChild>
+                    <Button variant="outline">Cancel</Button>
+                  </DialogClose>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Delete Account */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <div className="flex justify-between items-center p-3 border rounded-lg border-red-200 hover:bg-red-50 transition cursor-pointer">
+                  <div>
+                    <p className="font-medium text-red-700">Delete Account</p>
+                    <p className="text-sm text-red-600">Permanently delete your account</p>
+                  </div>
+                  <Button variant="destructive" size="sm">
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Delete
+                  </Button>
+                </div>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Do you really want to delete your account?</DialogTitle>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button variant="destructive" onClick={deleteAccount}>Yes, Delete</Button>
+                  <DialogClose asChild>
+                    <Button variant="outline">Cancel</Button>
+                  </DialogClose>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );
