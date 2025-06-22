@@ -229,8 +229,13 @@ class WorkSerializer(serializers.ModelSerializer):
     def validate(self, data):
         start = data.get('start_year')
         end = data.get('end_year')
-        if end is not None and end < start:
+
+        # If end_year is blank or None, set it to "present"
+        if not end:
+            data['end_year'] = "present"
+        elif isinstance(end, int) and isinstance(start, int) and end < start:
             raise serializers.ValidationError("End year cannot be before start year.")
+        
         return data
 
 ALLOWED_MIME_TYPES = [
@@ -262,13 +267,47 @@ class FileSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Unsupported file extension.")
         
         return value
+class ServiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Service
+        fields = ['id', 'name']
+
+    def validate_name(self, value):
+        user = self.context['request'].user
+        if user.role != 'organization':
+            raise serializers.ValidationError("Only organizations can add services.")
+
+        if not hasattr(user, 'organization_profile'):
+            raise serializers.ValidationError("Organization profile not found.")
+
+        if user.services.filter(name__iexact=value).exists():
+            raise serializers.ValidationError("Service name already exists for your organization.")
+
+        return value
+
+class OrganizationProfileSerializer(serializers.ModelSerializer):
+
+
+    class Meta:
+        model = OrganizationProfile
+        fields = [
+            'founding_year',
+            'industry_type',
+            'contact_person',
+      
+        ]
+   
+
 # profile update serializer
 class ProfileUpdateSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(required=True)
     phone = serializers.CharField(required=True)
     skills = SkillsSerializer(many=True, read_only=True)
     educations = EducationSerializer(many=True, read_only=True)
+    works = WorkSerializer(many=True, read_only=True)
     uploaded_files = FileSerializer(many=True, read_only=True)
+    organization_profile = OrganizationProfileSerializer(read_only=True)
+    services = ServiceSerializer(many=True, read_only=True)
 
     class Meta:
         model = User
@@ -278,14 +317,14 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
             'professional_title',
             'email', 'phone', 'address', 'bio', 'role',
             'profile_picture',
-            'skills', 'educations', 'uploaded_files'
+            'skills', 'educations', 'uploaded_files','works','profile_visibility','show_email','show_phone','organization_profile','services'
         ]
-        read_only_fields = ['role', 'skills', 'educations', 'uploaded_files']
+        read_only_fields = ['role', 'skills', 'educations', 'uploaded_files','works','profile_visibility','show_email','show_phone','organization_profile','services']
 
     def validate(self, data):
         role = self.instance.role  # current user role
 
-        # 🧠 Check missing values either from update payload or existing instance
+        # Check missing values either from update payload or existing instance
         def is_missing(field):
             return not data.get(field) and not getattr(self.instance, field, None)
 
@@ -350,3 +389,5 @@ class SessionInfoSerializer(serializers.Serializer):
     user_agent = serializers.CharField()
     last_activity = serializers.DateTimeField()
     is_current = serializers.BooleanField()
+
+

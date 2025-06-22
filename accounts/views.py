@@ -276,3 +276,30 @@ class RevokeSessionView(APIView):
                 return Response({'error': 'Unauthorized session.'}, status=status.HTTP_403_FORBIDDEN)
         except Session.DoesNotExist:
             return Response({'error': 'Session not found.'}, status=status.HTTP_404_NOT_FOUND)
+        
+class ServicesView(generics.CreateAPIView):
+    serializer_class = ServiceSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class ServiceDeleteView(generics.DestroyAPIView):
+    queryset = Service.objects.all()
+    serializer_class = ServiceSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        service = super().get_object()
+        if service.user != self.request.user:
+            raise PermissionDenied("You do not have permission to delete this service.")
+        return service
+
+# Organization profile: Retrieve or Update only one profile per user
+class OrganizationProfileView(generics.RetrieveUpdateAPIView):
+    serializer_class = OrganizationProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        profile, created = OrganizationProfile.objects.get_or_create(user=self.request.user)
+        return profile
