@@ -1,81 +1,77 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+ 
+} from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle} from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Bell, 
-  Plus, 
-  Trash2, 
-  Edit, 
-  Save, 
-  X, 
-  Clock,
-  Calendar,
-  AlertTriangle,
-  CheckCircle
+import {
+  Bell, Plus, Trash2, Edit, Save, X, Clock, Calendar,
+  AlertTriangle, CheckCircle, Bookmark, Phone, Flag
 } from 'lucide-react';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import api from '@/lib/api';
+
+// Helper function to get icon based on reminder type
+const getTypeIcon = (type) => {
+  switch (type) {
+    case 'personal':
+      return Bookmark;
+    case 'followup':
+      return Phone;
+    case 'deadline':
+      return Flag;
+    default:
+      return Bookmark;
+  }
+};
+
+// Helper function to get color class for priority badge
+const getPriorityColor = (priority) => {
+  switch (priority) {
+    case 'high':
+      return 'bg-red-100 text-red-800';
+    case 'medium':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'low':
+      return 'bg-green-100 text-green-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
 
 const Reminders = () => {
   const { toast } = useToast();
-  const [reminders, setReminders] = useState([
-    {
-      id: 1,
-      title: 'Follow up with TechCorp',
-      description: 'Send thank you email after interview',
-      dueDate: '2024-01-16',
-      dueTime: '10:00',
-      priority: 'high',
-      completed: false,
-      type: 'followup'
-    },
-    {
-      id: 2,
-      title: 'Update LinkedIn Profile',
-      description: 'Add recent project experience',
-      dueDate: '2024-01-18',
-      dueTime: '14:00',
-      priority: 'medium',
-      completed: false,
-      type: 'personal'
-    },
-    {
-      id: 3,
-      title: 'Application Deadline - StartupAI',
-      description: 'Submit application for Senior AI Engineer role',
-      dueDate: '2024-01-20',
-      dueTime: '23:59',
-      priority: 'high',
-      completed: false,
-      type: 'deadline'
-    }
-  ]);
-
+  const [reminders, setReminders] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingReminder, setEditingReminder] = useState(null);
   const [reminderToDelete, setReminderToDelete] = useState(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    dueDate: '',
-    dueTime: '',
+    due_date: '',
+    due_time: '',
     priority: 'medium',
     type: 'personal'
   });
+
+  useEffect(() => {
+    api.get('/reminders/').then(res => setReminders(res.data));
+  }, []);
 
   const resetForm = () => {
     setFormData({
       title: '',
       description: '',
-      dueDate: '',
-      dueTime: '',
+      due_date: '',
+      due_time: '',
       priority: 'medium',
       type: 'personal'
     });
@@ -91,8 +87,8 @@ const Reminders = () => {
     setFormData({
       title: reminder.title,
       description: reminder.description,
-      dueDate: reminder.dueDate,
-      dueTime: reminder.dueTime || '',
+      due_date: reminder.due_date,
+      due_time: reminder.due_time,
       priority: reminder.priority,
       type: reminder.type
     });
@@ -100,92 +96,68 @@ const Reminders = () => {
     setIsModalOpen(true);
   };
 
-  const handleSaveReminder = () => {
-    if (!formData.title.trim() || !formData.dueDate) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (editingReminder) {
-      // Edit existing reminder
-      setReminders(reminders.map(reminder =>
-        reminder.id === editingReminder.id 
-          ? { ...reminder, ...formData }
-          : reminder
-      ));
-      toast({
-        title: "Success",
-        description: "Reminder updated successfully"
-      });
-    } else {
-      // Add new reminder
-      const newReminder = {
-        id: Date.now(),
-        ...formData,
-        completed: false
-      };
-      setReminders([newReminder, ...reminders]);
-      toast({
-        title: "Success",
-        description: "Reminder added successfully"
-      });
-    }
-
-    setIsModalOpen(false);
-    resetForm();
-    setEditingReminder(null);
-  };
-
-  const handleToggleComplete = (id) => {
-    setReminders(reminders.map(reminder =>
-      reminder.id === id ? { ...reminder, completed: !reminder.completed } : reminder
-    ));
-  };
-
   const confirmDelete = (reminder) => {
     setReminderToDelete(reminder);
   };
 
-  const handleDeleteReminder = () => {
-    if (reminderToDelete) {
-      setReminders(reminders.filter(reminder => reminder.id !== reminderToDelete.id));
-      toast({
-        title: "Success",
-        description: "Reminder deleted successfully"
-      });
-      setReminderToDelete(null);
+  const handleSaveReminder = async () => {
+    if (!formData.title.trim() || !formData.due_date) {
+      toast({ title: 'Error', description: 'Please fill all required fields', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      if (editingReminder) {
+        const res = await api.put(`/reminders/${editingReminder.id}/`, formData);
+        setReminders(reminders.map(r => (r.id === editingReminder.id ? res.data : r)));
+        toast({ title: 'Reminder updated successfully' });
+      } else {
+        const res = await api.post('/reminders/', formData);
+        setReminders([res.data, ...reminders]);
+        toast({ title: 'Reminder added successfully' });
+      }
+    } catch {
+      toast({ title: 'Save failed', variant: 'destructive' });
+    }
+
+    setIsModalOpen(false);
+    resetForm();
+  };
+
+  const handleToggleComplete = async (id) => {
+    const reminder = reminders.find(r => r.id === id);
+    if (!reminder) return;
+
+    try {
+      const res = await api.put(`/reminders/${id}/`, { ...reminder, completed: !reminder.completed });
+      setReminders(reminders.map(r => (r.id === id ? res.data : r)));
+    } catch {
+      toast({ title: 'Failed to update status', variant: 'destructive' });
     }
   };
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800 border-red-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-green-100 text-green-800 border-green-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
+  const handleDeleteReminder = async () => {
+    if (!reminderToDelete) return;
 
-  const getTypeIcon = (type) => {
-    switch (type) {
-      case 'deadline': return AlertTriangle;
-      case 'followup': return Bell;
-      case 'personal': return Clock;
-      default: return Clock;
+    try {
+      await api.delete(`/reminders/${reminderToDelete.id}/`);
+      setReminders(reminders.filter(r => r.id !== reminderToDelete.id));
+      toast({ title: 'Reminder deleted successfully' });
+    } catch {
+      toast({ title: 'Delete failed', variant: 'destructive' });
     }
+
+    setReminderToDelete(null);
   };
 
   const isOverdue = (dueDate, dueTime) => {
+    if (!dueDate) return false;
     const now = new Date();
     const due = new Date(`${dueDate}T${dueTime || '23:59'}`);
     return due < now;
   };
 
-  const overdueReminders = reminders.filter(r => !r.completed && isOverdue(r.dueDate, r.dueTime));
+  const overdueReminders = reminders.filter(r => !r.completed && isOverdue(r.due_date, r.due_time));
 
   return (
     <DashboardLayout>
@@ -257,7 +229,7 @@ const Reminders = () => {
             <div className="space-y-4">
               {reminders.map((reminder) => {
                 const IconComponent = getTypeIcon(reminder.type);
-                const overdue = isOverdue(reminder.dueDate, reminder.dueTime) && !reminder.completed;
+                const overdue = isOverdue(reminder.due_date, reminder.due_time) && !reminder.completed;
                 
                 return (
                   <div
@@ -283,12 +255,12 @@ const Reminders = () => {
                           <div className="flex items-center space-x-4 text-sm text-gray-500">
                             <div className="flex items-center">
                               <Calendar className="h-4 w-4 mr-1" />
-                              {reminder.dueDate}
+                              {reminder.due_date}
                             </div>
-                            {reminder.dueTime && (
+                            {reminder.due_time && (
                               <div className="flex items-center">
                                 <Clock className="h-4 w-4 mr-1" />
-                                {reminder.dueTime}
+                                {reminder.due_time}
                               </div>
                             )}
                             {overdue && (
@@ -370,21 +342,21 @@ const Reminders = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="dueDate">Due Date *</Label>
+                  <Label htmlFor="due_date">Due Date *</Label>
                   <Input
-                    id="dueDate"
+                    id="due_date"
                     type="date"
-                    value={formData.dueDate}
-                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                    value={formData.due_date}
+                    onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="dueTime">Due Time</Label>
+                  <Label htmlFor="due_time">Due Time</Label>
                   <Input
-                    id="dueTime"
+                    id="due_time"
                     type="time"
-                    value={formData.dueTime}
-                    onChange={(e) => setFormData({ ...formData, dueTime: e.target.value })}
+                    value={formData.due_time}
+                    onChange={(e) => setFormData({ ...formData, due_time: e.target.value })}
                   />
                 </div>
                 <div>

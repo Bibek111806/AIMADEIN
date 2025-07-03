@@ -1,20 +1,19 @@
-
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Input } from '@/components/ui/input';
-import { 
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { 
-  Users, 
-  Building2, 
-  Search, 
-  Calendar, 
-  User, 
+} from "@/components/ui/dropdown-menu";
+import {
+  Users,
+  Building2,
+  Search,
+  Calendar,
+  User,
   Settings,
   Menu,
   X,
@@ -24,37 +23,110 @@ import {
   Heart,
   FolderOpen,
   HelpCircle,
-  ChevronDown
-} from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '@/context/authContext';
+  ChevronDown,
+} from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "@/context/authContext";
 interface DashboardLayoutProps {
   children: React.ReactNode;
   userType?: string;
   userName?: string;
 }
 
-const DashboardLayout = ({ children, userType = 'individual', userName = 'Funny Bunny' }: DashboardLayoutProps) => {
+const DashboardLayout = ({ children }: DashboardLayoutProps) => {
+  const { user } = useAuth();
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const location = useLocation();
 
-  const jobsPages = [
-    { id: 'jobs', label: 'Jobs', icon: Briefcase, path: '/jobs' },
-    { id: 'internships', label: 'Internships', icon: GraduationCap, path: '/internships' },
-    { id: 'volunteering', label: 'Volunteering', icon: Heart, path: '/volunteering' },
-    { id: 'projects', label: 'Projects', icon: FolderOpen, path: '/projects' }
-  ];
+  const jobsPages =
+    user?.role === "organization"
+      ? [
+          {
+            id: "jobs",
+            label: "Jobs",
+            icon: Briefcase,
+            path: "/jobs",
+          },
+        ]
+      : [
+          {
+            id: "jobs",
+            label: "Jobs",
+            icon: Briefcase,
+            path: "/jobs",
+          },
+          {
+            id: "internships",
+            label: "Internships",
+            icon: GraduationCap,
+            path: "/internships",
+          },
+          {
+            id: "volunteering",
+            label: "Volunteering",
+            icon: Heart,
+            path: "/volunteering",
+          },
+          {
+            id: "projects",
+            label: "Projects",
+            icon: FolderOpen,
+            path: "/projects",
+          },
+        ];
 
-  const mainPages = [
-    { id: 'dashboard', label: 'Dashboard', icon: User, path: '/dashboard' },
-    { id: 'community', label: 'Community', icon: Users, path: '/community' },
-    { id: 'calendar', label: 'Calendar', icon: Calendar, path: '/calendar' },
-    { id: 'reminders', label: 'Reminders', icon: Bell, path: '/reminders' }
-  ];
+  const mainPages =
+    user?.role === "organization"
+      ? [
+          {
+            id: "dashboard",
+            label: "Dashboard",
+            icon: User,
+            path: "/dashboard",
+          },
+          {
+            id: "candidates",
+            label: "Candidates",
+            icon: Users,
+            path: "/candidates",
+          },
+          {
+            id: "interviews",
+            label: "Interviews",
+            icon: Calendar,
+            path: "/interviews",
+          },
+        ]
+      : [
+          {
+            id: "dashboard",
+            label: "Dashboard",
+            icon: User,
+            path: "/dashboard",
+          },
+          {
+            id: "community",
+            label: "Community",
+            icon: Users,
+            path: "/community",
+          },
+          {
+            id: "calendar",
+            label: "Calendar",
+            icon: Calendar,
+            path: "/calendar",
+          },
+          {
+            id: "reminders",
+            label: "Reminders",
+            icon: Bell,
+            path: "/reminders",
+          },
+        ];
 
   const currentPage = location.pathname;
-  const isJobsSection = jobsPages.some(page => currentPage === page.path);
-  
+  const isJobsSection = jobsPages.some((page) => currentPage === page.path);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm border-b sticky top-0 z-50">
@@ -62,7 +134,6 @@ const DashboardLayout = ({ children, userType = 'individual', userName = 'Funny 
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <h1 className="text-xl font-bold text-slate-900">AIMADEIN</h1>
-  
             </div>
 
             <div className="hidden lg:flex flex-1 max-w-2xl mx-8">
@@ -80,23 +151,54 @@ const DashboardLayout = ({ children, userType = 'individual', userName = 'Funny 
               <Button variant="ghost" size="sm" className="hidden md:flex">
                 <Bell className="h-5 w-5" />
               </Button>
-              
+
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowMobileMenu(!showMobileMenu)}
                 className="lg:hidden"
               >
-                {showMobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                {showMobileMenu ? (
+                  <X className="h-5 w-5" />
+                ) : (
+                  <Menu className="h-5 w-5" />
+                )}
               </Button>
 
               <div className="flex items-center space-x-2">
                 <Avatar className="h-8 w-8">
-                  <AvatarFallback>{userName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                  {user.role === "individual" && (
+                    <AvatarFallback>
+                      {(user.first_name + " " + user.last_name)
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
+                  )}
+                  {user.role === "organization" && (
+                    <AvatarFallback>
+                      {user.company_name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
+                  )}
                 </Avatar>
                 <div className="hidden md:flex items-center space-x-1">
-                  <span className="text-sm font-medium">{userName}</span>
-                  <ChevronDown className="h-4 w-4 text-gray-400" />
+                  {user.role === "individual" && (
+                    <span className="text-sm font-medium">
+                      {user.first_name +
+                        " " +
+                        user.middle_name +
+                        " " +
+                        user.last_name}
+                    </span>
+                  )}
+                  {user.role === "organization" && (
+                    <span className="text-sm font-medium">
+                      {user.company_name}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -114,9 +216,9 @@ const DashboardLayout = ({ children, userType = 'individual', userName = 'Funny 
                     key={page.id}
                     to={page.path}
                     className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-                      active 
-                        ? 'text-blue-700 bg-blue-50 border-b-2 border-blue-700' 
-                        : 'text-gray-700 hover:text-blue-700 hover:bg-gray-50'
+                      active
+                        ? "text-blue-700 bg-blue-50 border-b-2 border-blue-700"
+                        : "text-gray-700 hover:text-blue-700 hover:bg-gray-50"
                     }`}
                   >
                     <IconComponent className="mr-2 h-4 w-4" />
@@ -125,43 +227,61 @@ const DashboardLayout = ({ children, userType = 'individual', userName = 'Funny 
                 );
               })}
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className={`flex items-center px-3 py-2 text-sm font-medium rounded-md h-auto ${
-                      isJobsSection 
-                        ? 'text-blue-700 bg-blue-50 border-b-2 border-blue-700' 
-                        : 'text-gray-700 hover:text-blue-700 hover:bg-gray-50'
+              {user?.role !== "organization" && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className={`flex items-center px-3 py-2 text-sm font-medium rounded-md h-auto ${
+                        isJobsSection
+                          ? "text-blue-700 bg-blue-50 border-b-2 border-blue-700"
+                          : "text-gray-700 hover:text-blue-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      <Briefcase className="mr-2 h-4 w-4" />
+                      Jobs
+                      <ChevronDown className="ml-1 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-48">
+                    {jobsPages.map((page) => {
+                      const IconComponent = page.icon;
+                      return (
+                        <DropdownMenuItem key={page.id} asChild>
+                          <Link
+                            to={page.path}
+                            className="flex items-center w-full cursor-pointer"
+                          >
+                            <IconComponent className="mr-2 h-4 w-4" />
+                            {page.label}
+                          </Link>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+
+              <div className="flex items-center space-x-4 ml-auto">
+                {user.role === "organization" && (
+                  <Link
+                    to="/jobs"
+                    className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
+                      currentPage === "/profile"
+                        ? "text-blue-700 bg-blue-50 border-b-2 border-blue-700"
+                        : "text-gray-700 hover:text-blue-700 hover:bg-gray-50"
                     }`}
                   >
                     <Briefcase className="mr-2 h-4 w-4" />
                     Jobs
-                    <ChevronDown className="ml-1 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48">
-                  {jobsPages.map((page) => {
-                    const IconComponent = page.icon;
-                    return (
-                      <DropdownMenuItem key={page.id} asChild>
-                        <Link to={page.path} className="flex items-center w-full cursor-pointer">
-                          <IconComponent className="mr-2 h-4 w-4" />
-                          {page.label}
-                        </Link>
-                      </DropdownMenuItem>
-                    );
-                  })}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              
-              <div className="flex items-center space-x-4 ml-auto">
+                  </Link>
+                )}
                 <Link
                   to="/profile"
                   className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-                    currentPage === '/profile'
-                      ? 'text-blue-700 bg-blue-50 border-b-2 border-blue-700'
-                      : 'text-gray-700 hover:text-blue-700 hover:bg-gray-50'
+                    currentPage === "/profile"
+                      ? "text-blue-700 bg-blue-50 border-b-2 border-blue-700"
+                      : "text-gray-700 hover:text-blue-700 hover:bg-gray-50"
                   }`}
                 >
                   <User className="mr-2 h-4 w-4" />
@@ -170,9 +290,9 @@ const DashboardLayout = ({ children, userType = 'individual', userName = 'Funny 
                 <Link
                   to="/settings"
                   className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-                    currentPage === '/settings'
-                      ? 'text-blue-700 bg-blue-50 border-b-2 border-blue-700'
-                      : 'text-gray-700 hover:text-blue-700 hover:bg-gray-50'
+                    currentPage === "/settings"
+                      ? "text-blue-700 bg-blue-50 border-b-2 border-blue-700"
+                      : "text-gray-700 hover:text-blue-700 hover:bg-gray-50"
                   }`}
                 >
                   <Settings className="mr-2 h-4 w-4" />
@@ -213,9 +333,9 @@ const DashboardLayout = ({ children, userType = 'individual', userName = 'Funny 
                     to={page.path}
                     onClick={() => setShowMobileMenu(false)}
                     className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-                      active 
-                        ? 'text-blue-700 bg-blue-50' 
-                        : 'text-gray-700 hover:text-blue-700 hover:bg-gray-50'
+                      active
+                        ? "text-blue-700 bg-blue-50"
+                        : "text-gray-700 hover:text-blue-700 hover:bg-gray-50"
                     }`}
                   >
                     <IconComponent className="mr-3 h-4 w-4" />
@@ -237,9 +357,9 @@ const DashboardLayout = ({ children, userType = 'individual', userName = 'Funny 
                       to={page.path}
                       onClick={() => setShowMobileMenu(false)}
                       className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-                        active 
-                          ? 'text-blue-700 bg-blue-50' 
-                          : 'text-gray-700 hover:text-blue-700 hover:bg-gray-50'
+                        active
+                          ? "text-blue-700 bg-blue-50"
+                          : "text-gray-700 hover:text-blue-700 hover:bg-gray-50"
                       }`}
                     >
                       <IconComponent className="mr-3 h-4 w-4" />
@@ -248,15 +368,15 @@ const DashboardLayout = ({ children, userType = 'individual', userName = 'Funny 
                   );
                 })}
               </div>
-              
+
               <div className="border-t pt-2 mt-2 space-y-2">
                 <Link
                   to="/profile"
                   onClick={() => setShowMobileMenu(false)}
                   className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-                    currentPage === '/profile'
-                      ? 'text-blue-700 bg-blue-50'
-                      : 'text-gray-700 hover:text-blue-700 hover:bg-gray-50'
+                    currentPage === "/profile"
+                      ? "text-blue-700 bg-blue-50"
+                      : "text-gray-700 hover:text-blue-700 hover:bg-gray-50"
                   }`}
                 >
                   <User className="mr-3 h-4 w-4" />
@@ -266,9 +386,9 @@ const DashboardLayout = ({ children, userType = 'individual', userName = 'Funny 
                   to="/settings"
                   onClick={() => setShowMobileMenu(false)}
                   className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-                    currentPage === '/settings'
-                      ? 'text-blue-700 bg-blue-50'
-                      : 'text-gray-700 hover:text-blue-700 hover:bg-gray-50'
+                    currentPage === "/settings"
+                      ? "text-blue-700 bg-blue-50"
+                      : "text-gray-700 hover:text-blue-700 hover:bg-gray-50"
                   }`}
                 >
                   <Settings className="mr-3 h-4 w-4" />
@@ -289,9 +409,7 @@ const DashboardLayout = ({ children, userType = 'individual', userName = 'Funny 
       </header>
 
       <main className="w-full">
-        <div className="px-4 sm:px-6 lg:px-8 py-8">
-          {children}
-        </div>
+        <div className="px-4 sm:px-6 lg:px-8 py-8">{children}</div>
       </main>
     </div>
   );

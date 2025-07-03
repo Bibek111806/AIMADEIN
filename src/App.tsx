@@ -25,9 +25,34 @@ import Reminders from "@/pages/remainders";
 import { AuthProvider } from "@/context/authContext";
 import ProtectedRoute from "@/routes/protectedRoutes";
 import GuestRoute from "@/routes/guestRoutes";
-
+import { useAuth } from "@/context/authContext";
+import OrganizationJobs from "./pages/organizationJobs"; 
+import Candidates from "./pages/candidates";
+import Interview from "./pages/interview";
+import OrganizationDashboard from "./pages/organizationDashboard";
 const queryClient = new QueryClient();
+const JobsWrapper = () => {
+  const { user } = useAuth();
 
+  if (!user) return null;
+
+  if (user.role === "organization") {
+    return <OrganizationJobs />;
+  }
+
+  return <Jobs />;
+};
+const DashboardWrapper = () => {
+  const { user } = useAuth();
+
+  if (!user) return null;
+
+  if (user.role === "organization") {
+    return <OrganizationDashboard />;
+  }
+
+  return <Dashboard />;
+};
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -67,7 +92,7 @@ const App = () => (
               path="/dashboard"
               element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <DashboardWrapper />
                 </ProtectedRoute>
               }
             />
@@ -75,7 +100,7 @@ const App = () => (
               path="/jobs"
               element={
                 <ProtectedRoute>
-                  <Jobs />
+                  <JobsWrapper />
                 </ProtectedRoute>
               }
             />
@@ -84,6 +109,22 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Reminders />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/candidates"
+              element={
+                <ProtectedRoute>
+                  <Candidates />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/interviews"
+              element={
+                <ProtectedRoute>
+                  <Interview />
                 </ProtectedRoute>
               }
             />
