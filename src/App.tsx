@@ -31,6 +31,7 @@ import OrganizationDashboard from "@/pages/organizationDashboard";
 import { AuthProvider, useAuth } from "@/context/authContext";
 import ProtectedRoute from "@/routes/protectedRoutes";
 import GuestRoute from "@/routes/guestRoutes";
+import RoleRoute from "@/routes/roleRoutes";
 import { JobManagerProvider } from "@/context/JobManagerContext";
 import { DashboardProvider } from "@/context/DashboardContext";
 import { InterviewProvider } from "@/context/InterviewContext";
@@ -45,20 +46,15 @@ const JobsWrapper = () => {
 
   if (user.role === "organization") {
     return (
-          <DashboardProvider>
-
-      <JobManagerProvider>
-        <OrganizationJobs />
-      </JobManagerProvider>
-          </DashboardProvider>
+      <DashboardProvider>
+        <JobManagerProvider>
+          <OrganizationJobs />
+        </JobManagerProvider>
+      </DashboardProvider>
     );
   }
 
-  return (
-   
-      <Jobs />
-   
-  );
+  return <Jobs />;
 };
 
 const DashboardWrapper = () => {
@@ -78,11 +74,7 @@ const DashboardWrapper = () => {
     );
   }
 
-  return (
-    
-      <Dashboard />
-
-  );
+  return <Dashboard />;
 };
 
 const InterviewWrapper = () => {
@@ -128,6 +120,22 @@ const App = () => (
                 </GuestRoute>
               }
             />
+            <Route
+              path="/verify/email"
+              element={
+                <GuestRoute>
+                  <VerifyEmail />
+                </GuestRoute>
+              }
+            />
+            <Route
+              path="/verify/phone"
+              element={
+                <GuestRoute>
+                  <VerifyPhone />
+                </GuestRoute>
+              }
+            />
 
             {/* Protected routes */}
             <Route
@@ -157,17 +165,41 @@ const App = () => (
             <Route
               path="/candidates"
               element={
-                <ProtectedRoute>
+                <RoleRoute allowedRoles={["organization"]}>
                   <Candidates />
-                </ProtectedRoute>
+                </RoleRoute>
               }
             />
             <Route
               path="/interviews"
               element={
-                <ProtectedRoute>
+                <RoleRoute allowedRoles={["organization"]}>
                   <InterviewWrapper />
-                </ProtectedRoute>
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/internships"
+              element={
+                <RoleRoute allowedRoles={["individual"]}>
+                  <Internships />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/volunteering"
+              element={
+                <RoleRoute allowedRoles={["individual"]}>
+                  <Volunteering />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/projects"
+              element={
+                <RoleRoute allowedRoles={["individual"]}>
+                  <Projects />
+                </RoleRoute>
               }
             />
             <Route
@@ -175,30 +207,6 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <JobDetails />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/internships"
-              element={
-                <ProtectedRoute>
-                  <Internships />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/volunteering"
-              element={
-                <ProtectedRoute>
-                  <Volunteering />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/projects"
-              element={
-                <ProtectedRoute>
-                  <Projects />
                 </ProtectedRoute>
               }
             />
@@ -229,9 +237,9 @@ const App = () => (
             <Route
               path="/calendar"
               element={
-                <ProtectedRoute>
+                <RoleRoute allowedRoles={["individual"]}>
                   <Calendar />
-                </ProtectedRoute>
+                </RoleRoute>
               }
             />
             <Route
@@ -248,22 +256,6 @@ const App = () => (
                 <ProtectedRoute>
                   <GroupChat />
                 </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/verify/email"
-              element={
-                <GuestRoute>
-                  <VerifyEmail />
-                </GuestRoute>
-              }
-            />
-            <Route
-              path="/verify/phone"
-              element={
-                <GuestRoute>
-                  <VerifyPhone />
-                </GuestRoute>
               }
             />
 
