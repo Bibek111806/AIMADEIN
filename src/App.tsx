@@ -22,37 +22,79 @@ import Register from "@/pages/register";
 import VerifyEmail from "@/pages/verifyEmail";
 import VerifyPhone from "@/pages/verifyPhone";
 import Reminders from "@/pages/remainders";
-import { AuthProvider } from "@/context/authContext";
+
+import OrganizationJobs from "@/pages/organizationJobs";
+import Candidates from "@/pages/candidates";
+import Interview from "@/pages/interview";
+import OrganizationDashboard from "@/pages/organizationDashboard";
+
+import { AuthProvider, useAuth } from "@/context/authContext";
 import ProtectedRoute from "@/routes/protectedRoutes";
 import GuestRoute from "@/routes/guestRoutes";
-import { useAuth } from "@/context/authContext";
-import OrganizationJobs from "./pages/organizationJobs"; 
-import Candidates from "./pages/candidates";
-import Interview from "./pages/interview";
-import OrganizationDashboard from "./pages/organizationDashboard";
+import { JobManagerProvider } from "@/context/JobManagerContext";
+import { DashboardProvider } from "@/context/DashboardContext";
+import { InterviewProvider } from "@/context/InterviewContext";
+import GroupChat from "./pages/groupChat";
+
 const queryClient = new QueryClient();
+
 const JobsWrapper = () => {
   const { user } = useAuth();
 
   if (!user) return null;
 
   if (user.role === "organization") {
-    return <OrganizationJobs />;
+    return (
+          <DashboardProvider>
+
+      <JobManagerProvider>
+        <OrganizationJobs />
+      </JobManagerProvider>
+          </DashboardProvider>
+    );
   }
 
-  return <Jobs />;
+  return (
+   
+      <Jobs />
+   
+  );
 };
+
 const DashboardWrapper = () => {
   const { user } = useAuth();
 
   if (!user) return null;
 
   if (user.role === "organization") {
-    return <OrganizationDashboard />;
+    return (
+      <DashboardProvider>
+        <JobManagerProvider>
+          <InterviewProvider>
+            <OrganizationDashboard />
+          </InterviewProvider>
+        </JobManagerProvider>
+      </DashboardProvider>
+    );
   }
 
-  return <Dashboard />;
+  return (
+    
+      <Dashboard />
+
+  );
 };
+
+const InterviewWrapper = () => {
+  return (
+    <DashboardProvider>
+      <InterviewProvider>
+        <Interview />
+      </InterviewProvider>
+    </DashboardProvider>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -124,7 +166,7 @@ const App = () => (
               path="/interviews"
               element={
                 <ProtectedRoute>
-                  <Interview />
+                  <InterviewWrapper />
                 </ProtectedRoute>
               }
             />
@@ -193,10 +235,18 @@ const App = () => (
               }
             />
             <Route
-              path="/chats/:id"
+              path="/chats/private/:id"
               element={
                 <ProtectedRoute>
                   <Chat />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/chats/group/:id"
+              element={
+                <ProtectedRoute>
+                  <GroupChat />
                 </ProtectedRoute>
               }
             />
@@ -225,6 +275,5 @@ const App = () => (
     </TooltipProvider>
   </QueryClientProvider>
 );
-
 
 export default App;

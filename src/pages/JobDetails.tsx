@@ -88,10 +88,19 @@ const JobDetails = () => {
 
   if (!job) return <DashboardLayout>Loading...</DashboardLayout>;
 
+  const showSalary = job.category === "job" || job.category === "project";
+  const showPerks =
+    job.category === "job" &&
+    !["freelance", "temporary"].includes(job.job_type);
+
   return (
     <DashboardLayout>
       <div className="max-w-4xl mx-auto space-y-6">
-        <Button variant="outline" onClick={() => navigate("/jobs")} className="mb-4">
+        <Button
+          variant="outline"
+          onClick={() => navigate("/jobs")}
+          className="mb-4"
+        >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Jobs
         </Button>
@@ -102,14 +111,28 @@ const JobDetails = () => {
               <div className="flex-1">
                 <CardTitle className="text-2xl mb-3">{job.title}</CardTitle>
                 <div className="flex flex-wrap items-center gap-4 text-gray-600 mb-4">
-                  <div className="flex items-center"><Building2 className="h-4 w-4 mr-1" />{job.organization_details.company_name}</div>
-                  <div className="flex items-center"><MapPin className="h-4 w-4 mr-1" />{job.location}</div>
-                  <div className="flex items-center"><DollarSign className="h-4 w-4 mr-1" />{job.salary_min}-{job.salary_max}</div>
-                  <div className="flex items-center"><Clock className="h-4 w-4 mr-1" />{job.time_ago}</div>
+                  <div className="flex items-center">
+                    <Building2 className="h-4 w-4 mr-1" />
+                    {job.organization_details.company_name}
+                  </div>
+                  <div className="flex items-center">
+                    <MapPin className="h-4 w-4 mr-1" />
+                    {job.location}
+                  </div>
+                  {showSalary && (
+                    <div className="flex items-center">
+                      <DollarSign className="h-4 w-4 mr-1" />
+                      {job.salary_min} - {job.salary_max}
+                    </div>
+                  )}
+                  <div className="flex items-center">
+                    <Clock className="h-4 w-4 mr-1" />
+                    {job.time_ago}
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <Badge variant="outline">{job.job_type}</Badge>
-                  <Badge variant="secondary">{job.location}</Badge>
+                  <Badge variant="secondary">{job.category}</Badge>
                 </div>
               </div>
               <div className="flex">
@@ -131,7 +154,11 @@ const JobDetails = () => {
                     Apply Now
                   </Button>
                 ) : (
-                  <Button size="lg" variant="destructive" onClick={handleWithdraw}>
+                  <Button
+                    size="lg"
+                    variant="destructive"
+                    onClick={handleWithdraw}
+                  >
                     <X className="h-4 w-4 mr-2" />
                     Withdraw
                   </Button>
@@ -151,56 +178,74 @@ const JobDetails = () => {
                 <CardTitle>Job Description</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-700 leading-relaxed">{job.description}</p>
+                <p className="text-gray-700 leading-relaxed">
+                  {job.description}
+                </p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Requirements</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  {job.requirements.map((req, index) => (
-                    <li key={index} className="flex items-start">
-                      <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                      {req}
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
+            {job.requirements?.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Requirements</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {job.requirements.map((req: string, index: number) => (
+                      <li
+                        key={index}
+                        className="flex items-start"
+                      >
+                        <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                        {req}
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Responsibilities</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  {job.responsibilities.map((resp, index) => (
-                    <li key={index} className="flex items-start">
-                      <span className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                      {resp}
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
+            {job.responsibilities?.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Responsibilities</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {job.responsibilities.map(
+                      (resp: string, index: number) => (
+                        <li
+                          key={index}
+                          className="flex items-start"
+                        >
+                          <span className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                          {resp}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Required Skills</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {job.skills_required.map((skill) => (
-                    <Badge key={skill} variant="secondary">{skill}</Badge>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            {job.skills_required?.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Required Skills</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {job.skills_required.map((skill: string) => (
+                      <Badge key={skill} variant="secondary">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardHeader>
@@ -209,34 +254,51 @@ const JobDetails = () => {
               <CardContent className="space-y-3">
                 <div>
                   <span className="font-medium">Company Name:</span>
-                  <p className="text-gray-600">{job.organization_details.company_name}</p>
+                  <p className="text-gray-600">
+                    {job.organization_details.company_name}
+                  </p>
                 </div>
                 <div>
                   <span className="font-medium">Founded:</span>
-                  <p className="text-gray-600">{job.organization_details.organization_profile.founding_year}</p>
+                  <p className="text-gray-600">
+                    {
+                      job.organization_details.organization_profile
+                        .founding_year
+                    }
+                  </p>
                 </div>
                 <div>
                   <span className="font-medium">Industry:</span>
-                  <p className="text-gray-600">{job.organization_details.organization_profile.industry_type}</p>
+                  <p className="text-gray-600">
+                    {
+                      job.organization_details.organization_profile
+                        .industry_type
+                    }
+                  </p>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Benefits & Perks</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  {job.perks.map((perk, index) => (
-                    <li key={index} className="flex items-start">
-                      <span className="w-2 h-2 bg-purple-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                      {perk}
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
+            {showPerks && job.perks?.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Benefits & Perks</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {job.perks.map((perk: string, index: number) => (
+                      <li
+                        key={index}
+                        className="flex items-start"
+                      >
+                        <span className="w-2 h-2 bg-purple-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                        {perk}
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>

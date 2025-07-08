@@ -20,14 +20,15 @@ import {
 import { Search, User, FileText, Eye, Filter } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useSearchParams } from "react-router-dom";
+
 const Candidates = () => {
   const [searchTerm, setSearchTerm] = useState("");
-const [searchParams] = useSearchParams();
-const jobParam = searchParams.get("job_id");
+  const [searchParams] = useSearchParams();
+  const jobParam = searchParams.get("job_id");
 
-const [selectedJob, setSelectedJob] = useState(
-  jobParam ? parseInt(jobParam) : "all"
-);
+  const [selectedJob, setSelectedJob] = useState(
+    jobParam ? parseInt(jobParam) : "all"
+  );
   const [candidates, setCandidates] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -49,7 +50,7 @@ const [selectedJob, setSelectedJob] = useState(
     const fetchJobs = async () => {
       try {
         const response = await api.get("/jobs/");
-        const jobList = response.data || [];
+        const jobList = response.data?.results || [];
         setJobs([
           { id: "all", title: "All Jobs" },
           ...jobList.map((job) => ({
@@ -88,11 +89,12 @@ const [selectedJob, setSelectedJob] = useState(
 
     fetchCandidates();
   }, [selectedJob, searchTerm]);
+
   useEffect(() => {
-  if (jobParam) {
-    setSelectedJob(parseInt(jobParam));
-  }
-}, [jobParam]);
+    if (jobParam) {
+      setSelectedJob(parseInt(jobParam));
+    }
+  }, [jobParam]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -142,12 +144,35 @@ const [selectedJob, setSelectedJob] = useState(
       );
 
       setCandidates((prev) =>
-        prev.map((c) => (c.id === selectedCandidate.id ? response.data : c))
+        prev.map((c) =>
+          c.id === selectedCandidate.id ? response.data : c
+        )
       );
 
       setDialogOpen(false);
     } catch (error) {
       console.error("Error changing status", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReject = async (candidate) => {
+    if (!candidate) return;
+
+    setLoading(true);
+    try {
+      const response = await api.patch(
+        `/applications/${candidate.id}/reject/`
+      );
+
+      setCandidates((prev) =>
+        prev.map((c) =>
+          c.id === candidate.id ? response.data : c
+        )
+      );
+    } catch (error) {
+      console.error("Error rejecting candidate", error);
     } finally {
       setLoading(false);
     }
@@ -217,12 +242,12 @@ const [selectedJob, setSelectedJob] = useState(
                       </div>
                       <div>
                         <CardTitle className="text-lg">
-                          {candidate.user.first_name}{" "}
-                          {candidate.user.middle_name}{" "}
-                          {candidate.user.last_name}
+                          {candidate.user
+                            ? `${candidate.user.first_name || ""} ${candidate.user.middle_name || ""} ${candidate.user.last_name || ""}`
+                            : "Unknown User"}
                         </CardTitle>
                         <CardDescription>
-                          {candidate.user.email}
+                          {candidate.user?.email || "N/A"}
                         </CardDescription>
                       </div>
                     </div>
@@ -254,7 +279,9 @@ const [selectedJob, setSelectedJob] = useState(
                     <div>
                       <span className="font-medium">Applied:</span>
                       <p className="text-gray-600">
-                        {new Date(candidate.applied_at).toLocaleDateString()}
+                        {candidate.applied_at
+                          ? new Date(candidate.applied_at).toLocaleDateString()
+                          : "N/A"}
                       </p>
                     </div>
                   </div>
@@ -262,14 +289,14 @@ const [selectedJob, setSelectedJob] = useState(
                   <div>
                     <span className="font-medium text-sm">Skills:</span>
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {(candidate.user.skills || []).length > 0 ? (
+                      {(candidate.user?.skills || []).length > 0 ? (
                         candidate.user.skills.map((skill) => (
                           <Badge
-                            key={skill}
+                            key={skill.id}
                             variant="secondary"
                             className="text-xs"
                           >
-                            {skill}
+                            {skill.name}
                           </Badge>
                         ))
                       ) : (
@@ -293,12 +320,7 @@ const [selectedJob, setSelectedJob] = useState(
                           if (candidate.resume?.file) {
                             window.open(candidate.resume.file, "_blank");
                           } else {
-                            toast({
-                              title: "No Resume",
-                              description:
-                                "This candidate has not uploaded a resume.",
-                              variant: "destructive",
-                            });
+                            alert("This candidate has not uploaded a resume.");
                           }
                         }}
                         disabled={!candidate.resume?.file}
@@ -353,9 +375,9 @@ const [selectedJob, setSelectedJob] = useState(
                 <p className="text-gray-600">
                   Change status of{" "}
                   <strong>
-                    {selectedCandidate?.user?.first_name}{" "}
-                    {selectedCandidate?.user?.middle_name}{" "}
-                    {selectedCandidate?.user?.last_name}
+                    {selectedCandidate?.user
+                      ? `${selectedCandidate.user.first_name || ""} ${selectedCandidate.user.middle_name || ""} ${selectedCandidate.user.last_name || ""}`
+                      : "Unknown User"}
                   </strong>{" "}
                   to{" "}
                   <span className="text-orange-600 font-semibold">
@@ -449,8 +471,6 @@ const [selectedJob, setSelectedJob] = useState(
               </DialogFooter>
             </DialogContent>
           </Dialog>
-
-
         </div>
       </div>
     </DashboardLayout>

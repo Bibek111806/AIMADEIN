@@ -17,8 +17,17 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
@@ -39,8 +48,13 @@ function JobCard({ job, onUpdate }) {
     }
   }, [open]);
 
+  const isInternshipOrVolunteering = 
+    ["internship", "volunteering"].includes(
+      job.category?.toLowerCase()
+    );
+
   const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case "applied":
         return "bg-blue-100 text-blue-800";
       case "saved":
@@ -61,12 +75,17 @@ function JobCard({ job, onUpdate }) {
 
   const handleApply = async () => {
     if (!selectedResume) {
-      toast({ title: "Select a resume to apply", variant: "destructive" });
+      toast({
+        title: "Select a resume to apply",
+        variant: "destructive",
+      });
       return;
     }
 
     try {
-      await api.post(`/jobs/${job.id}/apply/`, { resume: selectedResume });
+      await api.post(`/jobs/${job.id}/apply/`, {
+        resume: selectedResume,
+      });
       toast({ title: "Applied successfully!" });
       onUpdate?.(job.id, { applied: true });
       setOpen(false);
@@ -87,11 +106,15 @@ function JobCard({ job, onUpdate }) {
 
   const handleSave = async () => {
     try {
-      await api.post(`/jobs/${job.id}/save/`);
-      const newSavedState = !job.saved;
+      const res = await api.post(`/jobs/${job.id}/save/`);
+      const newSavedState = res.data.is_saved;
+
       toast({
-        title: newSavedState ? "Saved to your list." : "Removed from saved.",
+        title: newSavedState
+          ? "Saved to your list."
+          : "Removed from saved.",
       });
+
       onUpdate?.(job.id, { saved: newSavedState });
     } catch {
       toast({ title: "Save failed", variant: "destructive" });
@@ -110,7 +133,9 @@ function JobCard({ job, onUpdate }) {
         <CardHeader className="pb-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex-1">
-              <CardTitle className="text-lg mb-2">{job.title}</CardTitle>
+              <CardTitle className="text-lg mb-2">
+                {job.title}
+              </CardTitle>
               <div className="flex flex-wrap items-center text-gray-600 text-sm gap-2 mb-2">
                 <div className="flex items-center">
                   <Building2 className="h-4 w-4 mr-1" />
@@ -120,16 +145,21 @@ function JobCard({ job, onUpdate }) {
                   <MapPin className="h-4 w-4 mr-1" />
                   {job.location}
                 </div>
-                <div className="flex items-center">
-                  <DollarSign className="h-4 w-4 mr-1" />
-                  {job.salary_min}-{job.salary_max}
-                </div>
+                {!isInternshipOrVolunteering && (
+                  <div className="flex items-center">
+                    <DollarSign className="h-4 w-4 mr-1" />
+                    {job.salary_min} - {job.salary_max}
+                  </div>
+                )}
               </div>
               <div className="flex flex-wrap items-center text-sm text-gray-500 gap-2">
                 <Clock className="h-4 w-4 mr-1" />
                 <span>{job.time_ago}</span>
                 <Badge variant="outline" className="ml-2">
                   {job.job_type}
+                </Badge>
+                <Badge variant="outline" className="ml-2">
+                  {job.category}
                 </Badge>
               </div>
             </div>
@@ -143,7 +173,9 @@ function JobCard({ job, onUpdate }) {
                 {job.saved ? "Unsave" : "Save"}
               </Button>
               <Badge
-                className={`${getStatusColor(getPrimaryStatus(job))} text-xs px-2 py-0.5 rounded-full`}
+                className={`${getStatusColor(
+                  getPrimaryStatus(job)
+                )} text-xs px-2 py-0.5 rounded-full`}
               >
                 {getPrimaryStatus(job)}
               </Badge>
@@ -152,15 +184,19 @@ function JobCard({ job, onUpdate }) {
         </CardHeader>
 
         <CardContent>
-          <CardDescription className="mb-4">{job.description}</CardDescription>
+          <CardDescription className="mb-4">
+            {job.description}
+          </CardDescription>
 
-          <div className="flex flex-wrap gap-2 mb-4">
-            {job.skills_required?.map((skill) => (
-              <Badge key={skill} variant="secondary">
-                {skill}
-              </Badge>
-            ))}
-          </div>
+          {job.skills_required?.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {job.skills_required.map((skill) => (
+                <Badge key={skill} variant="secondary">
+                  {skill}
+                </Badge>
+              ))}
+            </div>
+          )}
 
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex flex-wrap gap-2">
@@ -181,14 +217,22 @@ function JobCard({ job, onUpdate }) {
               )}
 
               {job.applied && (
-                <Button size="sm" variant="destructive" onClick={handleWithdraw}>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={handleWithdraw}
+                >
                   <X className="h-4 w-4 mr-1" />
                   Withdraw
                 </Button>
               )}
             </div>
 
-            <Button size="sm" variant="ghost" onClick={handleShare}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleShare}
+            >
               Share
             </Button>
           </div>
@@ -202,15 +246,32 @@ function JobCard({ job, onUpdate }) {
             <DialogTitle>Select Resume</DialogTitle>
           </DialogHeader>
           {resumes.length === 0 ? (
-            <p className="text-sm text-gray-500">No resumes uploaded. Please upload one before applying.</p>
+            <p className="text-sm text-gray-500">
+              No resumes uploaded. Please upload one before applying.
+            </p>
           ) : (
-            <RadioGroup value={selectedResume} onValueChange={setSelectedResume} className="space-y-2">
+            <RadioGroup
+              value={selectedResume}
+              onValueChange={setSelectedResume}
+              className="space-y-2"
+            >
               {resumes.map((resume) => (
-                <div key={resume.id} className="flex items-center space-x-2">
-                  <RadioGroupItem value={resume.id.toString()} id={`resume-${resume.id}`} />
-                  <Label htmlFor={`resume-${resume.id}`} className="text-sm">
-                    {resume.file.split("/").pop().replace(/^\d+_\d+_/, '')}
-
+                <div
+                  key={resume.id}
+                  className="flex items-center space-x-2"
+                >
+                  <RadioGroupItem
+                    value={resume.id.toString()}
+                    id={`resume-${resume.id}`}
+                  />
+                  <Label
+                    htmlFor={`resume-${resume.id}`}
+                    className="text-sm"
+                  >
+                    {resume.file
+                      .split("/")
+                      .pop()
+                      .replace(/^\d+_\d+_/, "")}
                   </Label>
                 </div>
               ))}
@@ -218,10 +279,16 @@ function JobCard({ job, onUpdate }) {
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
               Cancel
             </Button>
-            <Button disabled={!selectedResume} onClick={handleApply}>
+            <Button
+              disabled={!selectedResume}
+              onClick={handleApply}
+            >
               Apply Now
             </Button>
           </DialogFooter>

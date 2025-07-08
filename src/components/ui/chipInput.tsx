@@ -1,17 +1,16 @@
 import { useState, KeyboardEvent } from 'react';
 import { X } from 'lucide-react';
-import { Input } from './input';
 
 interface ChipInputProps {
   label?: string;
-  values: string[];
+  values?: string[];
   onChange: (updated: string[]) => void;
   placeholder?: string;
 }
 
 export default function ChipInput({
   label,
-  values,
+  values = [],
   onChange,
   placeholder = 'Type and press enter...',
 }: ChipInputProps) {
@@ -36,7 +35,9 @@ export default function ChipInput({
 
   return (
     <div className="w-full space-y-1">
-      {label && <label className="block text-sm font-medium mb-1">{label}</label>}
+      {label && (
+        <label className="block text-sm font-medium mb-1">{label}</label>
+      )}
 
       <div
         className={`flex items-center flex-wrap gap-2 border border-input bg-background rounded-md px-3 ${

@@ -5,11 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Send,
-  Smile,
-  MoreVertical,
-} from 'lucide-react';
+import { Send, Users } from 'lucide-react';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import api from '@/lib/api';
 
@@ -22,30 +18,25 @@ interface Message {
   isMe: boolean;
 }
 
-const Chat = () => {
+const GroupChat = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const { id } = useParams();
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isWsOpen, setIsWsOpen] = useState(false);
-  const [chatUser, setChatUser] = useState<any>(null);
+  const [groupInfo, setGroupInfo] = useState<any>(null);
   const ws = useRef<WebSocket | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!id) return;
 
-    // Correct audio URL from public folder
     audioRef.current = new Audio('/sounds/notification.mp3');
-
     const token = localStorage.getItem("access_token");
 
     const fetchMessages = async () => {
       try {
-        console.log("Fetching messages...");
-        const res = await api.get(`/chat/private/${id}/`);
-        console.log("Fetched messages:", res.data);
-
+        const res = await api.get(`/chat/group/${id}/`);
         const transformed = res.data.map((msg: any) => ({
           id: msg.id,
           user: msg.sender.full_name,
@@ -60,23 +51,23 @@ const Chat = () => {
 
         setMessages(transformed);
       } catch (error) {
-        console.error("Error fetching messages:", error);
+        console.error("Error fetching group messages:", error);
       }
     };
 
-    const fetchUserData = async () => {
+    const fetchGroupInfo = async () => {
       try {
-        const res = await api.get(`/users/${id}/`);
-        setChatUser(res.data);
+        const res = await api.get(`/groups/${id}/`);
+        setGroupInfo(res.data);
       } catch (e) {
-        console.error("Error fetching chat user", e);
+        console.error("Error fetching group info", e);
       }
     };
 
     fetchMessages();
-    fetchUserData();
+    fetchGroupInfo();
 
-    const wsUrl = `ws://localhost:8000/ws/chat/private/${id}/?token=${token}`;
+    const wsUrl = `ws://localhost:8000/ws/chat/group/${id}/?token=${token}`;
     ws.current = new WebSocket(wsUrl);
 
     ws.current.onopen = () => {
@@ -86,7 +77,7 @@ const Chat = () => {
 
     ws.current.onmessage = (e) => {
       const data = JSON.parse(e.data);
-      console.log("WebSocket message:", data);
+
 
       setMessages((prev) => [
         ...prev,
@@ -135,7 +126,6 @@ const Chat = () => {
     }
 
     ws.current?.send(JSON.stringify({ message }));
-
     setMessage('');
   };
 
@@ -148,15 +138,15 @@ const Chat = () => {
   return (
     <DashboardLayout>
       <div className="h-[calc(100vh-8rem)] flex flex-col max-w-3xl mx-auto">
-        {/* Chat Header */}
+        {/* Group Header */}
         <Card className="mb-4 flex-shrink-0">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={chatUser?.profile_picture || null} />
+                  <AvatarImage src={groupInfo?.image || undefined} />
                   <AvatarFallback>
-                    {(chatUser?.full_name || chatUser?.email || `U${id}`)
+                    {(groupInfo?.name || `G${id}`)
                       .split(" ")
                       .map((n: string) => n[0])
                       .join("")}
@@ -164,8 +154,12 @@ const Chat = () => {
                 </Avatar>
                 <div>
                   <CardTitle className="text-lg">
-                    {chatUser?.full_name || chatUser?.email || `User #${id}`}
+                    {groupInfo?.name || `Group #${id}`}
                   </CardTitle>
+                  <div className="flex items-center space-x-2 text-sm text-gray-500">
+                    <Users className="h-4 w-4" />
+                    <span>{groupInfo?.members_count ?? 0} members</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -182,9 +176,11 @@ const Chat = () => {
                   className={`flex ${msg.isMe ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`flex space-x-2 max-w-xs sm:max-w-md lg:max-w-lg ${msg.isMe
-                      ? 'flex-row-reverse space-x-reverse'
-                      : ''}`}
+                    className={`flex space-x-2 max-w-xs sm:max-w-md lg:max-w-lg ${
+                      msg.isMe
+                        ? 'flex-row-reverse space-x-reverse'
+                        : ''
+                    }`}
                   >
                     {!msg.isMe && (
                       <Avatar className="h-8 w-8">
@@ -198,10 +194,11 @@ const Chat = () => {
                       </Avatar>
                     )}
                     <div
-                      className={`rounded-lg p-3 ${msg.isMe
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-100'
-                        }`}
+                      className={`rounded-lg p-3 ${
+                        msg.isMe
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-gray-100'
+                      }`}
                     >
                       {!msg.isMe && (
                         <p className="text-xs font-medium text-gray-600 mb-1">
@@ -210,10 +207,11 @@ const Chat = () => {
                       )}
                       <p className="text-sm">{msg.text}</p>
                       <p
-                        className={`text-xs mt-1 ${msg.isMe
-                          ? 'text-blue-100'
-                          : 'text-gray-500'
-                          }`}
+                        className={`text-xs mt-1 ${
+                          msg.isMe
+                            ? 'text-blue-100'
+                            : 'text-gray-500'
+                        }`}
                       >
                         {msg.time}
                       </p>
@@ -246,4 +244,4 @@ const Chat = () => {
   );
 };
 
-export default Chat;
+export default GroupChat;

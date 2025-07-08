@@ -1,301 +1,56 @@
-import { useEffect, useState } from "react";
-import api from "@/lib/api";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import {
-  Calendar,
-  Clock,
-  Plus,
   Edit,
   Trash2,
-  Video,
+  Plus,
+  Filter,
+  Calendar,
+  Clock,
+  Globe,
   MapPin,
+  Video,
   Phone,
   MessageSquare,
   CheckCircle,
   UserCheck,
   UserX,
-  Filter,
-  Globe,
 } from "lucide-react";
 
-interface Interview {
-  id: number;
-  candidateName: string;
-  candidateEmail: string;
-  position: string;
-  date: string;
-  time: string;
-  duration: string;
-  mode: string;
-  status: string;
-  notes?: string;
-  meetingLink?: string;
-}
+import { useInterview } from "@/context/InterviewContext";
+
 
 const Interview = () => {
-  const { toast } = useToast();
-
-  const [interviews, setInterviews] = useState<Interview[]>([]);
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingInterview, setEditingInterview] = useState<Interview | null>(
-    null
-  );
-  const [interviewToDelete, setInterviewToDelete] =
-    useState<Interview | null>(null);
-
-  const [formErrors, setFormErrors] = useState<Record<string, string[]>>({});
-
-  const [interviewForm, setInterviewForm] = useState({
-    candidateName: "",
-    candidateEmail: "",
-    position: "",
-    date: "",
-    time: "",
-    duration: "60",
-    mode: "online",
-    notes: "",
-    meetingLink: "",
-  });
-
-  const interviewModes = [
-    { label: "Online", value: "online" },
-    { label: "Offline", value: "offline" },
-    { label: "Zoom", value: "zoom" },
-    { label: "Google Meet", value: "google_meet" },
-    { label: "Phone Call", value: "phone_call" },
-  ];
-
-  useEffect(() => {
-    fetchInterviews();
-  }, [searchTerm, filterStatus]);
-
-  const fetchInterviews = async () => {
-    try {
-      const params: Record<string, string> = {};
-      if (searchTerm.trim()) {
-        params.search = searchTerm.trim();
-      }
-      if (filterStatus !== "all") {
-        params.status = filterStatus;
-      }
-
-      const queryString = new URLSearchParams(params).toString();
-
-      const res = await api.get(
-        `/interviews/${queryString ? `?${queryString}` : ""}`
-      );
-      const data = res.data;
-
-      const mapped: Interview[] = data.map((item: any) => ({
-        id: item.id,
-        candidateName: item.name,
-        candidateEmail: item.email,
-        position: item.position,
-        date: item.date,
-        time: item.time,
-        duration: item.duration_minutes?.toString() || "",
-        mode: item.interview_mode,
-        status: item.status,
-        notes: item.notes,
-        meetingLink: item.meeting_link,
-      }));
-
-      setInterviews(mapped);
-    } catch (error) {
-      console.error(error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch interviews.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleSaveInterview = async () => {
-    setFormErrors({});
-
-    if (!interviewForm.candidateName || !interviewForm.date || !interviewForm.time) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      if (editingInterview) {
-        await api.patch(`/interviews/${editingInterview.id}/`, {
-          name: interviewForm.candidateName,
-          email: interviewForm.candidateEmail,
-          position: interviewForm.position,
-          date: interviewForm.date,
-          time: interviewForm.time,
-          duration_minutes: parseInt(interviewForm.duration),
-          interview_mode: interviewForm.mode,
-          meeting_link: interviewForm.meetingLink,
-          notes: interviewForm.notes,
-        });
-        toast({
-          title: "Success",
-          description: "Interview updated successfully.",
-        });
-      } else {
-        await api.patch(`/interviews/add/`, {
-          name: interviewForm.candidateName,
-          email: interviewForm.candidateEmail,
-          position: interviewForm.position,
-          date: interviewForm.date,
-          time: interviewForm.time,
-          duration_minutes: parseInt(interviewForm.duration),
-          interview_mode: interviewForm.mode,
-          meeting_link: interviewForm.meetingLink,
-          notes: interviewForm.notes,
-        });
-        toast({
-          title: "Success",
-          description: "Interview scheduled successfully.",
-        });
-      }
-      setIsModalOpen(false);
-      fetchInterviews();
-    } catch (error: any) {
-      console.error(error);
-      if (error?.response?.status === 400 && error?.response?.data) {
-        setFormErrors(error.response.data);
-      } else {
-        toast({
-          title: "Error",
-          description: "Could not save interview.",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
-  const handleDeleteInterview = async () => {
-    if (interviewToDelete) {
-      try {
-        await api.delete(`/interviews/${interviewToDelete.id}/`);
-        toast({
-          title: "Success",
-          description: "Interview deleted.",
-        });
-        setInterviewToDelete(null);
-        fetchInterviews();
-      } catch (error) {
-        console.error(error);
-        toast({
-          title: "Error",
-          description: "Could not delete interview.",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
-  const updateInterviewStatus = async (id: number, newStatus: string) => {
-    try {
-      let endpoint = `/interviews/${id}/`;
-      let payload: any = {};
-
-      if (newStatus.toLowerCase() === "completed") {
-        endpoint = `/interviews/${id}/complete/`;
-      } else if (newStatus.toLowerCase() === "accepted") {
-        endpoint = `/interviews/${id}/accept/`;
-      } else if (newStatus.toLowerCase() === "rejected") {
-        endpoint = `/interviews/${id}/reject/`;
-      } else {
-        payload.status = newStatus;
-      }
-
-      if (["completed", "accepted", "rejected"].includes(newStatus.toLowerCase())) {
-        await api.patch(endpoint);
-      } else {
-        await api.patch(endpoint, payload);
-      }
-
-      toast({
-        title: "Success",
-        description: `Interview marked as ${newStatus}.`,
-      });
-      fetchInterviews();
-    } catch (error) {
-      console.error(error);
-      toast({
-        title: "Error",
-        description: "Failed to update status.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const openModal = (interview: Interview | null = null) => {
-    setFormErrors({});
-    if (interview) {
-      setInterviewForm({
-        candidateName: interview.candidateName,
-        candidateEmail: interview.candidateEmail,
-        position: interview.position,
-        date: interview.date,
-        time: interview.time,
-        duration: interview.duration,
-        mode: interview.mode,
-        notes: interview.notes || "",
-        meetingLink: interview.meetingLink || "",
-      });
-      setEditingInterview(interview);
-    } else {
-      setInterviewForm({
-        candidateName: "",
-        candidateEmail: "",
-        position: "",
-        date: "",
-        time: "",
-        duration: "60",
-        mode: "online",
-        notes: "",
-        meetingLink: "",
-      });
-      setEditingInterview(null);
-    }
-    setIsModalOpen(true);
-  };
+  const {
+    interviews,
+    openModal,
+    InterviewModal,
+  
+    editingInterview,
+    setInterviewToDelete,
+    interviewToDelete,
+    handleDeleteInterview,
+    searchTerm,
+    setSearchTerm,
+    filterStatus,
+    setFilterStatus,
+    updateInterviewStatus,
+  } = useInterview();
 
   const filteredInterviews = interviews.filter((interview) => {
     const matchesSearch =
-      interview.candidateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      interview.candidateName
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
       interview.position.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter =
       filterStatus === "all" ||
@@ -304,17 +59,13 @@ const Interview = () => {
   });
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Scheduled":
+    switch (status.toLowerCase()) {
       case "scheduled":
         return "bg-blue-100 text-blue-800";
-      case "Completed":
       case "completed":
         return "bg-purple-100 text-purple-800";
-      case "Accepted":
       case "accepted":
         return "bg-green-100 text-green-800";
-      case "Rejected":
       case "rejected":
         return "bg-red-100 text-red-800";
       default:
@@ -424,9 +175,9 @@ const Interview = () => {
                     {interview.mode.toLowerCase() === "online" && (
                       <Globe className="h-4 w-4 mr-2 text-blue-500" />
                     )}
-                    {["zoom", "google meet"].includes(interview.mode.toLowerCase()) && (
-                      <Video className="h-4 w-4 mr-2 text-blue-500" />
-                    )}
+                    {["zoom", "google meet"].includes(
+                      interview.mode.toLowerCase()
+                    ) && <Video className="h-4 w-4 mr-2 text-blue-500" />}
                     {interview.mode.toLowerCase() === "offline" && (
                       <MapPin className="h-4 w-4 mr-2 text-red-500" />
                     )}
@@ -511,205 +262,17 @@ const Interview = () => {
                   No interviews found
                 </h3>
                 <p className="text-gray-600">
-                  Try adjusting your search criteria or schedule a new interview.
+                  Try adjusting your search criteria or schedule a new
+                  interview.
                 </p>
               </CardContent>
             </Card>
           )}
 
-          {/* Dialog Modal */}
-          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingInterview ? "Edit Interview" : "Schedule New Interview"}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4 max-h-96 overflow-y-auto">
-                <div>
-                  <Label htmlFor="candidateName">Candidate Name *</Label>
-                  <Input
-                    id="candidateName"
-                    value={interviewForm.candidateName}
-                    onChange={(e) =>
-                      setInterviewForm({ ...interviewForm, candidateName: e.target.value })
-                    }
-                  />
-                  {formErrors.name && (
-                    <p className="text-red-600 text-xs mt-1">
-                      {formErrors.name.join(" ")}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="candidateEmail">Candidate Email</Label>
-                  <Input
-                    id="candidateEmail"
-                    type="email"
-                    value={interviewForm.candidateEmail}
-                    onChange={(e) =>
-                      setInterviewForm({ ...interviewForm, candidateEmail: e.target.value })
-                    }
-                  />
-                  {formErrors.email && (
-                    <p className="text-red-600 text-xs mt-1">
-                      {formErrors.email.join(" ")}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="position">Position</Label>
-                  <Input
-                    id="position"
-                    value={interviewForm.position}
-                    onChange={(e) =>
-                      setInterviewForm({ ...interviewForm, position: e.target.value })
-                    }
-                  />
-                  {formErrors.position && (
-                    <p className="text-red-600 text-xs mt-1">
-                      {formErrors.position.join(" ")}
-                    </p>
-                  )}
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="date">Date *</Label>
-                    <Input
-                      id="date"
-                      type="date"
-                      value={interviewForm.date}
-                      onChange={(e) =>
-                        setInterviewForm({ ...interviewForm, date: e.target.value })
-                      }
-                    />
-                    {formErrors.date && (
-                      <p className="text-red-600 text-xs mt-1">
-                        {formErrors.date.join(" ")}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <Label htmlFor="time">Time *</Label>
-                    <Input
-                      id="time"
-                      type="time"
-                      value={interviewForm.time}
-                      onChange={(e) =>
-                        setInterviewForm({ ...interviewForm, time: e.target.value })
-                      }
-                    />
-                    {formErrors.time && (
-                      <p className="text-red-600 text-xs mt-1">
-                        {formErrors.time.join(" ")}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <Label htmlFor="duration">Duration (min)</Label>
-                    <Input
-                      id="duration"
-                      type="number"
-                      value={interviewForm.duration}
-                      onChange={(e) =>
-                        setInterviewForm({ ...interviewForm, duration: e.target.value })
-                      }
-                    />
-                    {formErrors.duration_minutes && (
-                      <p className="text-red-600 text-xs mt-1">
-                        {formErrors.duration_minutes.join(" ")}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="mode">Interview Mode</Label>
-                  <select
-                    id="mode"
-                    className="w-full h-10 px-3 rounded-md border border-input bg-background"
-                    value={interviewForm.mode}
-                    onChange={(e) =>
-                      setInterviewForm({ ...interviewForm, mode: e.target.value })
-                    }
-                  >
-                    {interviewModes.map((mode) => (
-                      <option key={mode.value} value={mode.value}>
-                        {mode.label}
-                      </option>
-                    ))}
-                  </select>
-                  {formErrors.interview_mode && (
-                    <p className="text-red-600 text-xs mt-1">
-                      {formErrors.interview_mode.join(" ")}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="meetingLink">Meeting Link</Label>
-                  <Input
-                    id="meetingLink"
-                    value={interviewForm.meetingLink}
-                    onChange={(e) =>
-                      setInterviewForm({ ...interviewForm, meetingLink: e.target.value })
-                    }
-                    placeholder="https://meet.google.com/..."
-                  />
-                  {formErrors.meeting_link && (
-                    <p className="text-red-600 text-xs mt-1">
-                      {formErrors.meeting_link.join(" ")}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="notes">Notes</Label>
-                  <textarea
-                    id="notes"
-                    className="w-full h-20 px-3 py-2 rounded-md border border-input bg-background resize-none"
-                    value={interviewForm.notes}
-                    onChange={(e) =>
-                      setInterviewForm({ ...interviewForm, notes: e.target.value })
-                    }
-                    placeholder="Interview notes or preparation details..."
-                  />
-                  {formErrors.notes && (
-                    <p className="text-red-600 text-xs mt-1">
-                      {formErrors.notes.join(" ")}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSaveInterview}>
-                  {editingInterview ? "Update Interview" : "Schedule Interview"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          {/* Interview Modal */}
+          {InterviewModal}
 
-          {/* Delete Confirmation Modal */}
-          <AlertDialog
-            open={!!interviewToDelete}
-            onOpenChange={() => setInterviewToDelete(null)}
-          >
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Interview</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to delete this interview? This action
-                  cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteInterview}>
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+    
         </div>
       </div>
     </DashboardLayout>
