@@ -303,3 +303,14 @@ class OrganizationProfileView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         profile, created = OrganizationProfile.objects.get_or_create(user=self.request.user)
         return profile
+
+class FileListView(generics.ListAPIView):
+    serializer_class = FileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        file_type = self.request.query_params.get('type')
+        queryset = Files.objects.filter(user=self.request.user)
+        if file_type:
+            queryset = queryset.filter(file_type=file_type)
+        return queryset

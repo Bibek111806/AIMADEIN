@@ -31,4 +31,5 @@ urlpatterns = [
     path('organization/profile/', OrganizationProfileView.as_view(), name='organization-profile'),
     path('organization/services/', ServicesView.as_view(), name='org-services'),
     path('organization/services/<int:pk>/', ServiceDeleteView.as_view(), name='services-delete'),
+    path('files/', FileListView.as_view(), name='file-list'),
 ]

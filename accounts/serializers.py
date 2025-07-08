@@ -312,6 +312,7 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
+            'id',
             'company_name',
             'first_name', 'middle_name', 'last_name',
             'professional_title',
