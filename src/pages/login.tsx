@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/authContext";
+
 interface FormData {
   email: string;
   password: string;
@@ -19,20 +20,21 @@ function Login() {
     remember: false,
   });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]:value
-     
+      [name]: value,
     }));
   };
 
-const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
   e.preventDefault();
   setError("");
+  setLoading(true);
 
   try {
     const res = await axios.post("http://localhost:8000/accounts/login/", {
@@ -42,25 +44,59 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 
     const { access, refresh } = res.data;
 
-    login(access,refresh);
-
+    login(access, refresh);
     navigate("/dashboard");
+
   } catch (err: any) {
     const errorMessage =
       err.response?.data?.detail ||
-      err.response?.data?.email ||
-      err.response?.data?.phone ||
+      err.response?.data?.non_field_errors?.[0] ||
       "Login failed.";
 
-    //  Redirect to email verification in any verification failure case
     if (
       errorMessage === "Email is not verified." ||
       errorMessage === "Phone number is not verified."
     ) {
-      navigate(`/verify/email?email=${formData.email}`);
+      const unverifiedEmail =
+        err.response?.data?.detail === "Email is not verified." ||
+        err.response?.data?.non_field_errors?.[0] === "Email is not verified.";
+
+      const unverifiedPhone =
+        err.response?.data?.detail === "Phone number is not verified." ||
+        err.response?.data?.non_field_errors?.[0] ===
+          "Phone number is not verified.";
+
+      try {
+        if (unverifiedPhone) {
+          // First, send OTP for phone
+          await axios.post("http://localhost:8000/accounts/resend-otp/", {
+            email: formData.email,
+            type: "phone",
+          });
+          navigate(`/verify/phone?email=${formData.email}`);
+        } else if (unverifiedEmail) {
+          // Send OTP for email
+          await axios.post("http://localhost:8000/accounts/resend-otp/", {
+            email: formData.email,
+            type: "email",
+          });
+          navigate(`/verify/email?email=${formData.email}`);
+        }
+      } catch (resendError: any) {
+        console.error("Failed to send OTP:", resendError);
+        setError(
+          resendError.response?.data?.non_field_errors?.[0] ||
+            resendError.response?.data?.message ||
+            "Failed to resend OTP."
+        );
+      }
+    } else if (errorMessage === "Invalid email or password.") {
+      setError("Invalid email or password.");
     } else {
       setError(errorMessage);
     }
+  } finally {
+    setLoading(false);
   }
 };
 
@@ -102,8 +138,12 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
             />
           </div>
 
-          <Button type="submit" className="w-full h-11 mt-4">
-            Login
+          <Button
+            type="submit"
+            className="w-full h-11 mt-4"
+            disabled={loading}
+          >
+            {loading ? "Logging in..." : "Login"}
           </Button>
 
           <div className="text-center text-sm mt-4">

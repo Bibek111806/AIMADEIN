@@ -36,6 +36,7 @@ import { JobManagerProvider } from "@/context/JobManagerContext";
 import { DashboardProvider } from "@/context/DashboardContext";
 import { InterviewProvider } from "@/context/InterviewContext";
 import GroupChat from "./pages/groupChat";
+import UserProfile from "./pages/userProfile";
 
 const queryClient = new QueryClient();
 
@@ -159,6 +160,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Reminders />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/user/:id"
+              element={
+                <ProtectedRoute>
+                  <UserProfile />
                 </ProtectedRoute>
               }
             />

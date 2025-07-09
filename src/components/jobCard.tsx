@@ -24,10 +24,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  RadioGroup,
-  RadioGroupItem,
-} from "@/components/ui/radio-group";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
@@ -48,10 +45,9 @@ function JobCard({ job, onUpdate }) {
     }
   }, [open]);
 
-  const isInternshipOrVolunteering = 
-    ["internship", "volunteering"].includes(
-      job.category?.toLowerCase()
-    );
+  const isInternshipOrVolunteering = ["internship", "volunteering"].includes(
+    job.category?.toLowerCase()
+  );
 
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
@@ -110,9 +106,7 @@ function JobCard({ job, onUpdate }) {
       const newSavedState = res.data.is_saved;
 
       toast({
-        title: newSavedState
-          ? "Saved to your list."
-          : "Removed from saved.",
+        title: newSavedState ? "Saved to your list." : "Removed from saved.",
       });
 
       onUpdate?.(job.id, { saved: newSavedState });
@@ -133,9 +127,7 @@ function JobCard({ job, onUpdate }) {
         <CardHeader className="pb-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex-1">
-              <CardTitle className="text-lg mb-2">
-                {job.title}
-              </CardTitle>
+              <CardTitle className="text-lg mb-2">{job.title}</CardTitle>
               <div className="flex flex-wrap items-center text-gray-600 text-sm gap-2 mb-2">
                 <div className="flex items-center">
                   <Building2 className="h-4 w-4 mr-1" />
@@ -184,9 +176,7 @@ function JobCard({ job, onUpdate }) {
         </CardHeader>
 
         <CardContent>
-          <CardDescription className="mb-4">
-            {job.description}
-          </CardDescription>
+          <CardDescription className="mb-4">{job.description}</CardDescription>
 
           {job.skills_required?.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-4">
@@ -209,14 +199,14 @@ function JobCard({ job, onUpdate }) {
                 View Details
               </Button>
 
-              {!job.applied && (
+              {!(job.applied) && !(job.interviewed) && (
                 <Button size="sm" onClick={() => setOpen(true)}>
                   <Send className="h-4 w-4 mr-1" />
                   Easy Apply
                 </Button>
               )}
 
-              {job.applied && (
+              {(job.applied) && !(job.interviewed) && (
                 <Button
                   size="sm"
                   variant="destructive"
@@ -228,11 +218,7 @@ function JobCard({ job, onUpdate }) {
               )}
             </div>
 
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleShare}
-            >
+            <Button size="sm" variant="ghost" onClick={handleShare}>
               Share
             </Button>
           </div>
@@ -256,18 +242,12 @@ function JobCard({ job, onUpdate }) {
               className="space-y-2"
             >
               {resumes.map((resume) => (
-                <div
-                  key={resume.id}
-                  className="flex items-center space-x-2"
-                >
+                <div key={resume.id} className="flex items-center space-x-2">
                   <RadioGroupItem
                     value={resume.id.toString()}
                     id={`resume-${resume.id}`}
                   />
-                  <Label
-                    htmlFor={`resume-${resume.id}`}
-                    className="text-sm"
-                  >
+                  <Label htmlFor={`resume-${resume.id}`} className="text-sm">
                     {resume.file
                       .split("/")
                       .pop()
@@ -279,16 +259,10 @@ function JobCard({ job, onUpdate }) {
           )}
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button
-              disabled={!selectedResume}
-              onClick={handleApply}
-            >
+            <Button disabled={!selectedResume} onClick={handleApply}>
               Apply Now
             </Button>
           </DialogFooter>

@@ -49,7 +49,7 @@ const JobDetails = () => {
     try {
       await api.post(`/jobs/${job.id}/apply/`);
       toast({ title: "Successfully applied to this job." });
-      setJob((prev) => ({ ...prev, applied: true }));
+      setJob((prev) => ({ ...prev, status: "applied" }));
     } catch {
       toast({ title: "Apply failed", variant: "destructive" });
     }
@@ -59,7 +59,7 @@ const JobDetails = () => {
     try {
       await api.post(`/jobs/${job.id}/withdraw/`);
       toast({ title: "Withdrawn from job." });
-      setJob((prev) => ({ ...prev, applied: false }));
+      setJob((prev) => ({ ...prev, status: "new" }));
     } catch {
       toast({ title: "Withdraw failed", variant: "destructive" });
     }
@@ -88,7 +88,8 @@ const JobDetails = () => {
 
   if (!job) return <DashboardLayout>Loading...</DashboardLayout>;
 
-  const showSalary = job.category === "job" || job.category === "project";
+  const showSalary =
+    job.category === "job" || job.category === "project";
   const showPerks =
     job.category === "job" &&
     !["freelance", "temporary"].includes(job.job_type);
@@ -109,35 +110,41 @@ const JobDetails = () => {
           <CardHeader>
             <div className="flex justify-between items-start">
               <div className="flex-1">
-                <CardTitle className="text-2xl mb-3">{job.title}</CardTitle>
+                <CardTitle className="text-2xl mb-3">
+                  {job.title || "N/A"}
+                </CardTitle>
                 <div className="flex flex-wrap items-center gap-4 text-gray-600 mb-4">
                   <div className="flex items-center">
                     <Building2 className="h-4 w-4 mr-1" />
-                    {job.organization_details.company_name}
+                    {job.organization_details?.company_name || "N/A"}
                   </div>
                   <div className="flex items-center">
                     <MapPin className="h-4 w-4 mr-1" />
-                    {job.location}
+                    {job.location || "N/A"}
                   </div>
                   {showSalary && (
                     <div className="flex items-center">
                       <DollarSign className="h-4 w-4 mr-1" />
-                      {job.salary_min} - {job.salary_max}
+                      {job.salary_min || "N/A"} - {job.salary_max || "N/A"}
                     </div>
                   )}
                   <div className="flex items-center">
                     <Clock className="h-4 w-4 mr-1" />
-                    {job.time_ago}
+                    {job.time_ago || "N/A"}
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Badge variant="outline">{job.job_type}</Badge>
-                  <Badge variant="secondary">{job.category}</Badge>
+                  <Badge variant="outline">{job.job_type || "N/A"}</Badge>
+                  <Badge variant="secondary">{job.category || "N/A"}</Badge>
                 </div>
               </div>
               <div className="flex">
                 {user?.role === "individual" && (
-                  <Button variant="outline" size="sm" onClick={handleShare}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleShare}
+                  >
                     <Share2 className="h-4 w-4" />
                   </Button>
                 )}
@@ -148,12 +155,14 @@ const JobDetails = () => {
           <CardContent>
             {user?.role === "individual" && (
               <div className="flex gap-3 flex-wrap">
-                {!job.applied ? (
+                {job.status === "new" && (
                   <Button size="lg" onClick={handleApply}>
                     <Send className="h-4 w-4 mr-2" />
                     Apply Now
                   </Button>
-                ) : (
+                )}
+
+                {["applied", "interview"].includes(job.status) && (
                   <Button
                     size="lg"
                     variant="destructive"
@@ -163,7 +172,12 @@ const JobDetails = () => {
                     Withdraw
                   </Button>
                 )}
-                <Button variant="outline" size="lg" onClick={handleSave}>
+
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={handleSave}
+                >
                   {job.saved ? "Unsave Job" : "Save Job"}
                 </Button>
               </div>
@@ -179,7 +193,7 @@ const JobDetails = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-gray-700 leading-relaxed">
-                  {job.description}
+                  {job.description || "N/A"}
                 </p>
               </CardContent>
             </Card>
@@ -255,25 +269,19 @@ const JobDetails = () => {
                 <div>
                   <span className="font-medium">Company Name:</span>
                   <p className="text-gray-600">
-                    {job.organization_details.company_name}
+                    {job.organization_details?.company_name || "N/A"}
                   </p>
                 </div>
                 <div>
                   <span className="font-medium">Founded:</span>
                   <p className="text-gray-600">
-                    {
-                      job.organization_details.organization_profile
-                        .founding_year
-                    }
+                    {job.organization_details?.organization_profile?.founding_year || "N/A"}
                   </p>
                 </div>
                 <div>
                   <span className="font-medium">Industry:</span>
                   <p className="text-gray-600">
-                    {
-                      job.organization_details.organization_profile
-                        .industry_type
-                    }
+                    {job.organization_details?.organization_profile?.industry_type || "N/A"}
                   </p>
                 </div>
               </CardContent>

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { useNavigate,Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 function Register() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     role: "individual",
@@ -27,14 +29,23 @@ function Register() {
       ...prev,
       [name]: value,
     }));
+
+    // clear field error when user changes field
+    setFieldErrors((prev) => ({
+      ...prev,
+      [name]: "",
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
+    setLoading(true);
 
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match.");
+      setLoading(false);
       return;
     }
 
@@ -58,17 +69,41 @@ function Register() {
               password: formData.password,
             };
 
-      const res = await axios.post("http://localhost:8000/accounts/register/", payload);
+      const res = await axios.post(
+        "http://localhost:8000/accounts/register/",
+        payload
+      );
 
       if (res.status === 201 || res.data.success) {
-        navigate("/verify/email?email="+formData.email);
+        navigate("/verify/email?email=" + formData.email);
       } else {
         setError("Registration failed. Please try again.");
       }
     } catch (err: any) {
-      const message =
-        err.response?.data?.error || err.response?.data?.message || "Something went wrong.";
-      setError(message);
+      if (err.response?.data) {
+        const data = err.response.data;
+        const fieldErrs: Record<string, string> = {};
+
+        for (const key in data) {
+          if (Array.isArray(data[key])) {
+            fieldErrs[key] = data[key][0];
+          } else if (typeof data[key] === "string") {
+            fieldErrs[key] = data[key];
+          }
+        }
+
+        setFieldErrors(fieldErrs);
+
+        if (Object.keys(fieldErrs).length === 0) {
+          setError(
+            data.detail || data.error || data.message || "Registration failed."
+          );
+        }
+      } else {
+        setError("Something went wrong.");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -83,8 +118,6 @@ function Register() {
         {error && <div className="text-red-500 text-center mb-4">{error}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-
-
           {formData.role === "individual" && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
@@ -98,6 +131,9 @@ function Register() {
                   onChange={handleChange}
                   required
                 />
+                {fieldErrors.first_name && (
+                  <p className="text-red-500 text-sm">{fieldErrors.first_name}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="MiddleName">Middle Name</Label>
@@ -109,6 +145,9 @@ function Register() {
                   value={formData.middleName}
                   onChange={handleChange}
                 />
+                {fieldErrors.middle_name && (
+                  <p className="text-red-500 text-sm">{fieldErrors.middle_name}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="LastName">Last Name *</Label>
@@ -121,6 +160,9 @@ function Register() {
                   onChange={handleChange}
                   required
                 />
+                {fieldErrors.last_name && (
+                  <p className="text-red-500 text-sm">{fieldErrors.last_name}</p>
+                )}
               </div>
             </div>
           )}
@@ -137,6 +179,9 @@ function Register() {
                 onChange={handleChange}
                 required
               />
+              {fieldErrors.company_name && (
+                <p className="text-red-500 text-sm">{fieldErrors.company_name}</p>
+              )}
             </div>
           )}
 
@@ -151,6 +196,9 @@ function Register() {
               onChange={handleChange}
               required
             />
+            {fieldErrors.email && (
+              <p className="text-red-500 text-sm">{fieldErrors.email}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -164,6 +212,9 @@ function Register() {
               onChange={handleChange}
               required
             />
+            {fieldErrors.phone && (
+              <p className="text-red-500 text-sm">{fieldErrors.phone}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -177,6 +228,9 @@ function Register() {
               onChange={handleChange}
               required
             />
+            {fieldErrors.password && (
+              <p className="text-red-500 text-sm">{fieldErrors.password}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -191,7 +245,8 @@ function Register() {
               required
             />
           </div>
-                    <div className="space-y-2">
+
+          <div className="space-y-2">
             <Label htmlFor="role">Account Type *</Label>
             <select
               id="role"
@@ -207,8 +262,8 @@ function Register() {
           </div>
 
           <div className="pt-4">
-            <Button type="submit" className="w-full h-11 mt-6">
-              Register
+            <Button type="submit" className="w-full h-11 mt-6" disabled={loading}>
+              {loading ? "Registering..." : "Register"}
             </Button>
           </div>
 

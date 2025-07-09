@@ -112,6 +112,7 @@ export default function Jobs() {
         res.data.map((item) => ({
           ...item.job,
           applied_id: item.id,
+          applied:true,
           applied_created_at: item.created_at,
         }))
       );
@@ -126,13 +127,16 @@ export default function Jobs() {
     try {
       setLoading(true);
       const res = await api.get("/my-jobs/interview/?category=job");
-      setInterviewJobs(
-        res.data.map((item) => ({
-          ...item.job,
-          interview_id: item.id,
-          interview_created_at: item.created_at,
-        }))
-      );
+setInterviewJobs(
+  res.data.map((item) => ({
+    ...item.job,
+    interview_id: item.id,
+    interview_created_at: item.created_at,
+    applied: true,             // ← Add this!
+    interviewed: true          // ← Optional for clarity
+  }))
+);
+      
     } catch (error) {
       console.error(error);
     } finally {

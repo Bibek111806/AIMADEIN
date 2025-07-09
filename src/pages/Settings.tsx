@@ -46,10 +46,16 @@ function Settings() {
     confirm: "",
   });
 
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
   const updatePassword = async () => {
     if (passwords.new !== passwords.confirm) {
-      return toast({ title: "Password mismatch", variant: "destructive" });
+      toast({ title: "Password mismatch", variant: "destructive" });
+      setPasswordDialogOpen(false);
+      return;
     }
+    setPasswordLoading(true);
     try {
       await api.post(
         "accounts/change-password/",
@@ -60,10 +66,20 @@ function Settings() {
         },
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
-      toast({ title: "Password Updated", description: "Your password has been changed." });
+      toast({
+        title: "Password Updated",
+        description: "Your password has been changed.",
+      });
       setPasswords({ current: "", new: "", confirm: "" });
     } catch {
-      toast({ title: "Failed", description: "Could not update password", variant: "destructive" });
+      toast({
+        title: "Failed",
+        description: "Could not update password",
+        variant: "destructive",
+      });
+    } finally {
+      setPasswordLoading(false);
+      setPasswordDialogOpen(false);
     }
   };
 
@@ -78,10 +94,17 @@ function Settings() {
         },
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
-      toast({ title: "Privacy Updated", description: "Your privacy settings were saved." });
+      toast({
+        title: "Privacy Updated",
+        description: "Your privacy settings were saved.",
+      });
       login(accessToken!, localStorage.getItem("refresh_token")!);
     } catch {
-      toast({ title: "Failed", description: "Could not save privacy settings", variant: "destructive" });
+      toast({
+        title: "Failed",
+        description: "Could not save privacy settings",
+        variant: "destructive",
+      });
     }
   };
 
@@ -90,10 +113,17 @@ function Settings() {
       await api.delete("accounts/delete/", {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      toast({ title: "Account Deleted", description: "Your account was permanently deleted." });
+      toast({
+        title: "Account Deleted",
+        description: "Your account was permanently deleted.",
+      });
       logout();
     } catch {
-      toast({ title: "Failed", description: "Could not delete account", variant: "destructive" });
+      toast({
+        title: "Failed",
+        description: "Could not delete account",
+        variant: "destructive",
+      });
     }
   };
 
@@ -101,7 +131,9 @@ function Settings() {
     <DashboardLayout>
       <div className="space-y-6">
         <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600">Manage your account preferences and privacy settings</p>
+        <p className="text-gray-600">
+          Manage your account preferences and privacy settings
+        </p>
 
         {/* Password */}
         <Card>
@@ -110,37 +142,57 @@ function Settings() {
               <Lock className="mr-2 h-5 w-5" />
               Password & Security
             </CardTitle>
-            <CardDescription>Manage your password and security settings</CardDescription>
+            <CardDescription>
+              Manage your password and security settings
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Input
               type="password"
               placeholder="Current password"
               value={passwords.current}
-              onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
+              onChange={(e) =>
+                setPasswords({ ...passwords, current: e.target.value })
+              }
             />
             <Input
               type="password"
               placeholder="New password"
               value={passwords.new}
-              onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
+              onChange={(e) =>
+                setPasswords({ ...passwords, new: e.target.value })
+              }
             />
             <Input
               type="password"
               placeholder="Confirm new password"
               value={passwords.confirm}
-              onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
+              onChange={(e) =>
+                setPasswords({ ...passwords, confirm: e.target.value })
+              }
             />
-            <Dialog>
+            <Dialog
+              open={passwordDialogOpen}
+              onOpenChange={setPasswordDialogOpen}
+            >
               <DialogTrigger asChild>
-                <Button className="w-full">Update Password</Button>
+                <Button className="w-full" onClick={() => setPasswordDialogOpen(true)}>
+                  Update Password
+                </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Do you really want to change your password?</DialogTitle>
+                  <DialogTitle>
+                    Do you really want to change your password?
+                  </DialogTitle>
                 </DialogHeader>
                 <DialogFooter>
-                  <Button onClick={updatePassword}>Yes, Change</Button>
+                  <Button
+                    onClick={updatePassword}
+                    disabled={passwordLoading}
+                  >
+                    {passwordLoading ? "Updating..." : "Yes, Change"}
+                  </Button>
                   <DialogClose asChild>
                     <Button variant="outline">Cancel</Button>
                   </DialogClose>
@@ -158,20 +210,32 @@ function Settings() {
                 <Shield className="mr-2 h-5 w-5" />
                 Privacy Settings
               </CardTitle>
-              <CardDescription>Control who can see your information</CardDescription>
+              <CardDescription>
+                Control who can see your information
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
-                <label className="block text-sm font-medium mb-2">Profile Visibility</label>
+                <label className="block text-sm font-medium mb-2">
+                  Profile Visibility
+                </label>
                 <Select
                   value={privacy.profileVisibility}
-                  onValueChange={(value) => setPrivacy({ ...privacy, profileVisibility: value })}
+                  onValueChange={(value) =>
+                    setPrivacy({ ...privacy, profileVisibility: value })
+                  }
                 >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="public">Public (Everyone)</SelectItem>
-                    <SelectItem value="connection">Connections Only</SelectItem>
-                    <SelectItem value="organization">Organizations Only</SelectItem>
+                    <SelectItem value="connection">
+                      Connections Only
+                    </SelectItem>
+                    <SelectItem value="organization">
+                      Organizations Only
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -180,14 +244,18 @@ function Settings() {
                   <span>Show email address</span>
                   <Switch
                     checked={privacy.showEmail}
-                    onCheckedChange={(checked) => setPrivacy({ ...privacy, showEmail: checked })}
+                    onCheckedChange={(checked) =>
+                      setPrivacy({ ...privacy, showEmail: checked })
+                    }
                   />
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Show phone number</span>
                   <Switch
                     checked={privacy.showPhone}
-                    onCheckedChange={(checked) => setPrivacy({ ...privacy, showPhone: checked })}
+                    onCheckedChange={(checked) =>
+                      setPrivacy({ ...privacy, showPhone: checked })
+                    }
                   />
                 </div>
               </div>
@@ -211,7 +279,9 @@ function Settings() {
                 <div className="flex justify-between items-center p-3 border rounded-lg bg-blue-50 border-blue-200 hover:bg-blue-100 transition cursor-pointer">
                   <div>
                     <p className="font-medium text-blue-800">Logout</p>
-                    <p className="text-sm text-blue-700">Log out from your account</p>
+                    <p className="text-sm text-blue-700">
+                      Log out from your account
+                    </p>
                   </div>
                   <Button
                     variant="outline"
@@ -228,7 +298,9 @@ function Settings() {
                   <DialogTitle>Do you really want to logout?</DialogTitle>
                 </DialogHeader>
                 <DialogFooter>
-                  <Button variant="destructive" onClick={logout}>Yes, Logout</Button>
+                  <Button variant="destructive" onClick={logout}>
+                    Yes, Logout
+                  </Button>
                   <DialogClose asChild>
                     <Button variant="outline">Cancel</Button>
                   </DialogClose>
@@ -242,7 +314,9 @@ function Settings() {
                 <div className="flex justify-between items-center p-3 border rounded-lg border-red-200 hover:bg-red-50 transition cursor-pointer">
                   <div>
                     <p className="font-medium text-red-700">Delete Account</p>
-                    <p className="text-sm text-red-600">Permanently delete your account</p>
+                    <p className="text-sm text-red-600">
+                      Permanently delete your account
+                    </p>
                   </div>
                   <Button variant="destructive" size="sm">
                     <Trash2 className="h-4 w-4 mr-1" />
@@ -252,10 +326,14 @@ function Settings() {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Do you really want to delete your account?</DialogTitle>
+                  <DialogTitle>
+                    Do you really want to delete your account?
+                  </DialogTitle>
                 </DialogHeader>
                 <DialogFooter>
-                  <Button variant="destructive" onClick={deleteAccount}>Yes, Delete</Button>
+                  <Button variant="destructive" onClick={deleteAccount}>
+                    Yes, Delete
+                  </Button>
                   <DialogClose asChild>
                     <Button variant="outline">Cancel</Button>
                   </DialogClose>
