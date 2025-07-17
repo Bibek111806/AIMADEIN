@@ -20,8 +20,9 @@ import {
 import { Search, User, FileText, Eye, Filter } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useSearchParams } from "react-router-dom";
-
+import { useToast } from "@/hooks/use-toast";
 const Candidates = () => {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [searchParams] = useSearchParams();
   const jobParam = searchParams.get("job_id");
@@ -44,7 +45,7 @@ const Candidates = () => {
   const [interviewNotes, setInterviewNotes] = useState("");
   const [statusValue, setStatusValue] = useState("scheduled");
 
-  const [showResumeModal, setShowResumeModal] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -65,9 +66,7 @@ const Candidates = () => {
 
     fetchJobs();
   }, []);
-
-  useEffect(() => {
-    const fetchCandidates = async () => {
+ const fetchCandidates = async () => {
       try {
         let url = "/candidates/";
         const params = new URLSearchParams();
@@ -86,6 +85,8 @@ const Candidates = () => {
         console.error("Error fetching candidates", error);
       }
     };
+  useEffect(() => {
+   
 
     fetchCandidates();
   }, [selectedJob, searchTerm]);
@@ -120,6 +121,7 @@ const Candidates = () => {
     setMeetingLink("");
     setInterviewNotes("");
     setStatusValue("scheduled");
+    setFormErrors({});
     setDialogOpen(true);
   };
 
@@ -127,6 +129,8 @@ const Candidates = () => {
     if (!selectedCandidate) return;
 
     setLoading(true);
+    setFormErrors({});
+
     try {
       const payload = {
         date,
@@ -143,15 +147,27 @@ const Candidates = () => {
         payload
       );
 
-      setCandidates((prev) =>
-        prev.map((c) =>
-          c.id === selectedCandidate.id ? response.data : c
-        )
-      );
+      fetchCandidates();
+      toast({
+        title: "Interview Scheduled",
+        description: `Interview successfully scheduled for ${
+          selectedCandidate?.user?.first_name || "Candidate"
+        }.`,
+      });
 
       setDialogOpen(false);
     } catch (error) {
-      console.error("Error changing status", error);
+      if (error.response?.data) {
+        setFormErrors(error.response.data);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description:
+            error?.message ||
+            "An error occurred while scheduling the interview.",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -162,17 +178,22 @@ const Candidates = () => {
 
     setLoading(true);
     try {
-      const response = await api.patch(
-        `/applications/${candidate.id}/reject/`
-      );
+      const response = await api.patch(`/applications/${candidate.id}/reject/`);
 
-      setCandidates((prev) =>
-        prev.map((c) =>
-          c.id === candidate.id ? response.data : c
-        )
-      );
+      fetchCandidates();
+      toast({
+        title: "Candidate Rejected",
+        description: `Candidate ${
+          candidate?.user?.first_name || ""
+        } has been rejected.`,
+      });
     } catch (error) {
-      console.error("Error rejecting candidate", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description:
+          error?.message || "An error occurred while rejecting the candidate.",
+      });
     } finally {
       setLoading(false);
     }
@@ -243,7 +264,9 @@ const Candidates = () => {
                       <div>
                         <CardTitle className="text-lg">
                           {candidate.user
-                            ? `${candidate.user.first_name || ""} ${candidate.user.middle_name || ""} ${candidate.user.last_name || ""}`
+                            ? `${candidate.user.first_name || ""} ${
+                                candidate.user.middle_name || ""
+                              } ${candidate.user.last_name || ""}`
                             : "Unknown User"}
                         </CardTitle>
                         <CardDescription>
@@ -376,7 +399,9 @@ const Candidates = () => {
                   Change status of{" "}
                   <strong>
                     {selectedCandidate?.user
-                      ? `${selectedCandidate.user.first_name || ""} ${selectedCandidate.user.middle_name || ""} ${selectedCandidate.user.last_name || ""}`
+                      ? `${selectedCandidate.user.first_name || ""} ${
+                          selectedCandidate.user.middle_name || ""
+                        } ${selectedCandidate.user.last_name || ""}`
                       : "Unknown User"}
                   </strong>{" "}
                   to{" "}
@@ -395,6 +420,11 @@ const Candidates = () => {
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
                   />
+                  {formErrors.date && (
+                    <p className="text-xs text-red-600 mt-1">
+                      {formErrors.date[0]}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -406,6 +436,11 @@ const Candidates = () => {
                     value={time}
                     onChange={(e) => setTime(e.target.value)}
                   />
+                  {formErrors.time && (
+                    <p className="text-xs text-red-600 mt-1">
+                      {formErrors.time[0]}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -418,6 +453,11 @@ const Candidates = () => {
                     value={durationMinutes}
                     onChange={(e) => setDurationMinutes(e.target.value)}
                   />
+                  {formErrors.duration_minutes && (
+                    <p className="text-xs text-red-600 mt-1">
+                      {formErrors.duration_minutes[0]}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -436,6 +476,11 @@ const Candidates = () => {
                     <option value="google_meet">Google Meet</option>
                     <option value="phone_call">Phone Call</option>
                   </select>
+                  {formErrors.interview_mode && (
+                    <p className="text-xs text-red-600 mt-1">
+                      {formErrors.interview_mode[0]}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -447,6 +492,11 @@ const Candidates = () => {
                     value={meetingLink}
                     onChange={(e) => setMeetingLink(e.target.value)}
                   />
+                  {formErrors.meeting_link && (
+                    <p className="text-xs text-red-600 mt-1">
+                      {formErrors.meeting_link[0]}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -459,6 +509,11 @@ const Candidates = () => {
                     className="w-full border border-gray-300 rounded-md p-2 text-sm"
                     rows={3}
                   />
+                  {formErrors.notes && (
+                    <p className="text-xs text-red-600 mt-1">
+                      {formErrors.notes[0]}
+                    </p>
+                  )}
                 </div>
               </div>
               <DialogFooter>

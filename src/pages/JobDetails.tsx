@@ -29,6 +29,12 @@ const JobDetails = () => {
   const navigate = useNavigate();
   const [job, setJob] = useState<any>(null);
 
+  const [resumeModalOpen, setResumeModalOpen] = useState(false);
+  const [uploadedResumes, setUploadedResumes] = useState<any[]>([]);
+  const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
+  const [localResume, setLocalResume] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+
   useEffect(() => {
     const fetchJob = async () => {
       try {
@@ -42,16 +48,51 @@ const JobDetails = () => {
         });
       }
     };
+
+    const fetchResumes = async () => {
+      try {
+        const res = await api.get(`accounts/files/?type=resume`);
+        setUploadedResumes(res.data);
+      } catch {
+        toast({ title: "Failed to load resumes", variant: "destructive" });
+      }
+    };
+
     if (id) fetchJob();
+    if (user?.role === "individual") fetchResumes();
   }, [id]);
 
-  const handleApply = async () => {
+  const openResumeModal = () => setResumeModalOpen(true);
+  const closeResumeModal = () => {
+    setResumeModalOpen(false);
+    setLocalResume(null);
+    setSelectedResumeId(null);
+  };
+
+  const confirmApply = async () => {
+    const formData = new FormData();
+
+    if (localResume) {
+      formData.append("resume_file", localResume);
+    } else if (selectedResumeId) {
+      formData.append("resume", selectedResumeId);
+    } else {
+      toast({ title: "Please select or upload a resume", variant: "destructive" });
+      return;
+    }
+
     try {
-      await api.post(`/jobs/${job.id}/apply/`);
+      setUploading(true);
+      await api.post(`/jobs/${job.id}/apply/`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
       toast({ title: "Successfully applied to this job." });
-      setJob((prev) => ({ ...prev, status: "applied" }));
+      setJob((prev) => ({ ...prev, applied: true }));
+      setUploading(false);
+      closeResumeModal();
     } catch {
       toast({ title: "Apply failed", variant: "destructive" });
+      setUploading(false);
     }
   };
 
@@ -59,7 +100,7 @@ const JobDetails = () => {
     try {
       await api.post(`/jobs/${job.id}/withdraw/`);
       toast({ title: "Withdrawn from job." });
-      setJob((prev) => ({ ...prev, status: "new" }));
+      setJob((prev) => ({ ...prev, applied: false }));
     } catch {
       toast({ title: "Withdraw failed", variant: "destructive" });
     }
@@ -67,8 +108,8 @@ const JobDetails = () => {
 
   const handleSave = async () => {
     try {
-      await api.post(`/jobs/${job.id}/save/`);
-      const newSaved = !job.saved;
+      const res = await api.post(`/jobs/${job.id}/save/`);
+      const newSaved = res.data.is_saved;
       toast({
         title: newSaved ? "Job saved." : "Job removed from saved list.",
       });
@@ -88,20 +129,13 @@ const JobDetails = () => {
 
   if (!job) return <DashboardLayout>Loading...</DashboardLayout>;
 
-  const showSalary =
-    job.category === "job" || job.category === "project";
-  const showPerks =
-    job.category === "job" &&
-    !["freelance", "temporary"].includes(job.job_type);
+  const showSalary = job.category === "job" || job.category === "project";
+  const showPerks = job.category === "job" && !["freelance", "temporary"].includes(job.job_type);
 
   return (
     <DashboardLayout>
       <div className="max-w-4xl mx-auto space-y-6">
-        <Button
-          variant="outline"
-          onClick={() => navigate("/jobs")}
-          className="mb-4"
-        >
+        <Button variant="outline" onClick={() => navigate("/jobs")} className="mb-4">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Jobs
         </Button>
@@ -110,9 +144,7 @@ const JobDetails = () => {
           <CardHeader>
             <div className="flex justify-between items-start">
               <div className="flex-1">
-                <CardTitle className="text-2xl mb-3">
-                  {job.title || "N/A"}
-                </CardTitle>
+                <CardTitle className="text-2xl mb-3">{job.title || "N/A"}</CardTitle>
                 <div className="flex flex-wrap items-center gap-4 text-gray-600 mb-4">
                   <div className="flex items-center">
                     <Building2 className="h-4 w-4 mr-1" />
@@ -140,11 +172,7 @@ const JobDetails = () => {
               </div>
               <div className="flex">
                 {user?.role === "individual" && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleShare}
-                  >
+                  <Button variant="outline" size="sm" onClick={handleShare}>
                     <Share2 className="h-4 w-4" />
                   </Button>
                 )}
@@ -155,35 +183,83 @@ const JobDetails = () => {
           <CardContent>
             {user?.role === "individual" && (
               <div className="flex gap-3 flex-wrap">
-                {job.status === "new" && (
-                  <Button size="lg" onClick={handleApply}>
+                {!job.applied && !job.interviewed && (
+                  <Button size="lg" onClick={openResumeModal}>
                     <Send className="h-4 w-4 mr-2" />
                     Apply Now
                   </Button>
                 )}
 
-                {["applied", "interview"].includes(job.status) && (
-                  <Button
-                    size="lg"
-                    variant="destructive"
-                    onClick={handleWithdraw}
-                  >
+                {job.applied && !job.interviewed && (
+                  <Button size="lg" variant="destructive" onClick={handleWithdraw}>
                     <X className="h-4 w-4 mr-2" />
                     Withdraw
                   </Button>
                 )}
 
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={handleSave}
-                >
+                <Button variant="outline" size="lg" onClick={handleSave}>
                   {job.saved ? "Unsave Job" : "Save Job"}
                 </Button>
               </div>
             )}
           </CardContent>
         </Card>
+
+        {/* Resume Modal */}
+        {resumeModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex justify-center items-center">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
+              <h2 className="text-xl font-bold mb-4">Choose Resume</h2>
+
+              <div className="space-y-3 mb-4">
+                {uploadedResumes.map((res) => (
+                  <div key={res.id} className="flex items-center gap-3">
+                    <input
+                      type="radio"
+                      name="resume"
+                      value={res.id}
+                      checked={selectedResumeId === res.id}
+                      onChange={() => {
+                        setSelectedResumeId(res.id);
+                        setLocalResume(null);
+                      }}
+                    />
+                    <span>
+                      {res.file.split("/").pop().replace(/^\d+_\d+_/, "")}
+                    </span>
+                  </div>
+                ))}
+
+                <div>
+                  <label className="block font-medium mb-1">Upload Resume</label>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setLocalResume(file);
+                        setSelectedResumeId(null);
+                      }
+                    }}
+                  />
+                  {localResume && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      Selected File: <strong>{localResume.name}</strong>
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={closeResumeModal}>Cancel</Button>
+                <Button onClick={confirmApply} disabled={(!selectedResumeId && !localResume) || uploading}>
+                  {uploading ? "Applying..." : "Submit"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
@@ -206,10 +282,7 @@ const JobDetails = () => {
                 <CardContent>
                   <ul className="space-y-2">
                     {job.requirements.map((req: string, index: number) => (
-                      <li
-                        key={index}
-                        className="flex items-start"
-                      >
+                      <li key={index} className="flex items-start">
                         <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
                         {req}
                       </li>
@@ -226,17 +299,12 @@ const JobDetails = () => {
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2">
-                    {job.responsibilities.map(
-                      (resp: string, index: number) => (
-                        <li
-                          key={index}
-                          className="flex items-start"
-                        >
-                          <span className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                          {resp}
-                        </li>
-                      )
-                    )}
+                    {job.responsibilities.map((resp: string, index: number) => (
+                      <li key={index} className="flex items-start">
+                        <span className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                        {resp}
+                      </li>
+                    ))}
                   </ul>
                 </CardContent>
               </Card>
@@ -252,9 +320,7 @@ const JobDetails = () => {
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
                     {job.skills_required.map((skill: string) => (
-                      <Badge key={skill} variant="secondary">
-                        {skill}
-                      </Badge>
+                      <Badge key={skill} variant="secondary">{skill}</Badge>
                     ))}
                   </div>
                 </CardContent>
@@ -268,21 +334,15 @@ const JobDetails = () => {
               <CardContent className="space-y-3">
                 <div>
                   <span className="font-medium">Company Name:</span>
-                  <p className="text-gray-600">
-                    {job.organization_details?.company_name || "N/A"}
-                  </p>
+                  <p className="text-gray-600">{job.organization_details?.company_name || "N/A"}</p>
                 </div>
                 <div>
                   <span className="font-medium">Founded:</span>
-                  <p className="text-gray-600">
-                    {job.organization_details?.organization_profile?.founding_year || "N/A"}
-                  </p>
+                  <p className="text-gray-600">{job.organization_details?.organization_profile?.founding_year || "N/A"}</p>
                 </div>
                 <div>
                   <span className="font-medium">Industry:</span>
-                  <p className="text-gray-600">
-                    {job.organization_details?.organization_profile?.industry_type || "N/A"}
-                  </p>
+                  <p className="text-gray-600">{job.organization_details?.organization_profile?.industry_type || "N/A"}</p>
                 </div>
               </CardContent>
             </Card>
@@ -295,10 +355,7 @@ const JobDetails = () => {
                 <CardContent>
                   <ul className="space-y-2">
                     {job.perks.map((perk: string, index: number) => (
-                      <li
-                        key={index}
-                        className="flex items-start"
-                      >
+                      <li key={index} className="flex items-start">
                         <span className="w-2 h-2 bg-purple-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
                         {perk}
                       </li>

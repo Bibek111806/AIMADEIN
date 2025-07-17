@@ -36,6 +36,8 @@ function JobCard({ job, onUpdate }) {
   const [open, setOpen] = useState(false);
   const [resumes, setResumes] = useState([]);
   const [selectedResume, setSelectedResume] = useState(null);
+  const [uploadedFile, setUploadedFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -70,23 +72,43 @@ function JobCard({ job, onUpdate }) {
   };
 
   const handleApply = async () => {
-    if (!selectedResume) {
-      toast({
-        title: "Select a resume to apply",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
+      let resumeId = selectedResume;
+
+      if (uploadedFile) {
+        setUploading(true);
+        const formData = new FormData();
+        formData.append("file", uploadedFile);
+        formData.append("file_type", "resume");
+
+        const res = await api.post("accounts/files/", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+
+        resumeId = res.data.id;
+        setUploading(false);
+      }
+
+      if (!resumeId) {
+        toast({
+          title: "Select or upload a resume",
+          variant: "destructive",
+        });
+        return;
+      }
+
       await api.post(`/jobs/${job.id}/apply/`, {
-        resume: selectedResume,
+        resume: resumeId,
       });
+
       toast({ title: "Applied successfully!" });
       onUpdate?.(job.id, { applied: true });
       setOpen(false);
+      setSelectedResume(null);
+      setUploadedFile(null);
     } catch {
       toast({ title: "Apply failed", variant: "destructive" });
+      setUploading(false);
     }
   };
 
@@ -199,14 +221,14 @@ function JobCard({ job, onUpdate }) {
                 View Details
               </Button>
 
-              {!(job.applied) && !(job.interviewed) && (
+              {!job.applied && !job.interviewed && (
                 <Button size="sm" onClick={() => setOpen(true)}>
                   <Send className="h-4 w-4 mr-1" />
                   Easy Apply
                 </Button>
               )}
 
-              {(job.applied) && !(job.interviewed) && (
+              {job.applied && !job.interviewed && (
                 <Button
                   size="sm"
                   variant="destructive"
@@ -231,9 +253,10 @@ function JobCard({ job, onUpdate }) {
           <DialogHeader>
             <DialogTitle>Select Resume</DialogTitle>
           </DialogHeader>
+
           {resumes.length === 0 ? (
             <p className="text-sm text-gray-500">
-              No resumes uploaded. Please upload one before applying.
+              No resumes uploaded. Please upload one to apply.
             </p>
           ) : (
             <RadioGroup
@@ -248,22 +271,38 @@ function JobCard({ job, onUpdate }) {
                     id={`resume-${resume.id}`}
                   />
                   <Label htmlFor={`resume-${resume.id}`} className="text-sm">
-                    {resume.file
-                      .split("/")
-                      .pop()
-                      .replace(/^\d+_\d+_/, "")}
+                    {resume.file.split("/").pop().replace(/^\d+_\d+_/, "")}
                   </Label>
                 </div>
               ))}
             </RadioGroup>
           )}
 
-          <DialogFooter>
+          <div className="text-sm text-gray-500 mt-4 mb-2">
+            or upload a new resume
+          </div>
+
+          <input
+            type="file"
+            accept=".pdf,.doc,.docx"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                setUploadedFile(file);
+                setSelectedResume(null);
+              }
+            }}
+          />
+
+          <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button disabled={!selectedResume} onClick={handleApply}>
-              Apply Now
+            <Button
+              onClick={handleApply}
+              disabled={(!selectedResume && !uploadedFile) || uploading}
+            >
+              {uploading ? "Applying..." : "Apply Now"}
             </Button>
           </DialogFooter>
         </DialogContent>

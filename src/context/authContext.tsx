@@ -98,7 +98,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setAccessToken(null);
     setRefreshToken(null);
     setUser(null);
-    navigate("/login");
+    navigate("/");
   };
 
   const fetchUserProfile = async (token: string | null = accessToken) => {
